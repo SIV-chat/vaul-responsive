@@ -37,5 +37,7 @@ yarn-error.log*
 /playwright-report/
 /playwright/.cache/
 
-# styles
-style.css
+# styles copied next to the package for the `./style.css` export
+/packages/vaul-responsive/style.css
+
+*.tgz

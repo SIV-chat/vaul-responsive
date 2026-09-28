@@ -1,8 +1,6 @@
-'use client';
-
 import { clsx } from 'clsx';
 import { useState } from 'react';
-import { Drawer } from 'vaul';
+import { Drawer } from 'vaul-responsive';
 
 const snapPoints = ['148px', '355px', 1];
 

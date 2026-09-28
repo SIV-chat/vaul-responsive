@@ -1,7 +1,7 @@
 import React from 'react';
 import { isSafari } from './browser';
 
-let previousBodyPosition: Record<string, string> | null = null;
+let previousBodyPosition: Record<'position' | 'top' | 'left' | 'height' | 'right', string> | null = null;
 
 /**
  * This hook is necessary to prevent buggy behavior on iOS devices (need to test on Android).
@@ -11,7 +11,6 @@ let previousBodyPosition: Record<string, string> | null = null;
  * https://github.com/emilkowalski/vaul/issues/433
  * And more that I discovered, but were just not reported.
  */
-
 export function usePositionFixed({
   isOpen,
   modal,
@@ -28,7 +27,6 @@ export function usePositionFixed({
   noBodyStyles: boolean;
 }) {
   const [activeUrl, setActiveUrl] = React.useState(() => (typeof window !== 'undefined' ? window.location.href : ''));
-  const scrollPos = React.useRef(0);
 
   const setPositionFixed = React.useCallback(() => {
     // All browsers on iOS will return true here.
@@ -36,20 +34,20 @@ export function usePositionFixed({
 
     // If previousBodyPosition is already set, don't set it again.
     if (previousBodyPosition === null && isOpen && !noBodyStyles) {
+      const { style } = document.body;
       previousBodyPosition = {
-        position: document.body.style.position,
-        top: document.body.style.top,
-        left: document.body.style.left,
-        height: document.body.style.height,
+        position: style.position,
+        top: style.top,
+        left: style.left,
+        height: style.height,
         right: 'unset',
       };
 
-      // Update the dom inside an animation frame
-      const { scrollX, innerHeight } = window;
+      const { scrollX, scrollY, innerHeight } = window;
 
-      document.body.style.setProperty('position', 'fixed', 'important');
-      Object.assign(document.body.style, {
-        top: `${-scrollPos.current}px`,
+      style.setProperty('position', 'fixed', 'important');
+      Object.assign(style, {
+        top: `${-scrollY}px`,
         left: `${-scrollX}px`,
         right: '0px',
         height: 'auto',
@@ -60,15 +58,15 @@ export function usePositionFixed({
           window.requestAnimationFrame(() => {
             // Attempt to check if the bottom bar appeared due to the position change
             const bottomBarHeight = innerHeight - window.innerHeight;
-            if (bottomBarHeight && scrollPos.current >= innerHeight) {
+            if (bottomBarHeight && scrollY >= innerHeight) {
               // Move the content further up so that the bottom bar doesn't hide it
-              document.body.style.top = `${-(scrollPos.current + bottomBarHeight)}px`;
+              style.top = `${-(scrollY + bottomBarHeight)}px`;
             }
           }),
         300,
       );
     }
-  }, [isOpen]);
+  }, [isOpen, noBodyStyles]);
 
   const restorePositionSetting = React.useCallback(() => {
     // All browsers on iOS will return true here.
@@ -93,21 +91,7 @@ export function usePositionFixed({
 
       previousBodyPosition = null;
     }
-  }, [activeUrl]);
-
-  React.useEffect(() => {
-    function onScroll() {
-      scrollPos.current = window.scrollY;
-    }
-
-    onScroll();
-
-    window.addEventListener('scroll', onScroll);
-
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-    };
-  }, []);
+  }, [activeUrl, noBodyStyles, preventScrollRestoration]);
 
   React.useEffect(() => {
     if (!modal) return;
@@ -129,7 +113,7 @@ export function usePositionFixed({
     if (isOpen) {
       // avoid for standalone mode (PWA)
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      !isStandalone && setPositionFixed();
+      if (!isStandalone) setPositionFixed();
 
       if (!modal) {
         window.setTimeout(() => {

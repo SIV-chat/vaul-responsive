@@ -1,6 +1,4 @@
-'use client';
-
-import { Drawer } from 'vaul';
+import { Drawer } from 'vaul-responsive';
 
 export default function Page() {
   return (

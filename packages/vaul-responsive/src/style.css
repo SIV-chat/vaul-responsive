@@ -254,3 +254,14 @@
     transform: translate3d(var(--initial-transform, 100%), 0, 0);
   }
 }
+
+/* Motion collapses to an instant change. 1ms rather than `none`, so Radix still gets the `animationend`
+   it waits for before unmounting. `!important` also covers the transitions written inline while dragging. */
+@media (prefers-reduced-motion: reduce) {
+  [data-vaul-drawer],
+  [data-vaul-overlay],
+  [data-vaul-drawer-wrapper] {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

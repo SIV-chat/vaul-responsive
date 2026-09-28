@@ -1,9 +1,6 @@
-'use client';
-
 import { useState } from 'react';
-import clsx from 'clsx';
-import { Drawer } from 'vaul';
-import { DrawerDirection } from 'vaul/src/types';
+import { clsx } from 'clsx';
+import { Drawer, type DrawerDirection } from 'vaul-responsive';
 
 const CenteredContent = () => {
   return (

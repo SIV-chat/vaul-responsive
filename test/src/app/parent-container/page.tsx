@@ -1,7 +1,5 @@
-'use client';
-import clsx from 'clsx';
 import { useState } from 'react';
-import { Drawer } from 'vaul';
+import { Drawer } from 'vaul-responsive';
 
 export default function Page() {
   return (

@@ -9,17 +9,14 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     container:
-        image: mcr.microsoft.com/playwright:v1.41.2
+      image: mcr.microsoft.com/playwright:v1.41.2
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      - run: npm install -g pnpm@8.8.0
-      - run: pnpm install
-      - run: pnpm build
-      - run: npx playwright install
-      - run: pnpm test || exit 1
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bunx playwright install
+      - run: bun run test || exit 1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

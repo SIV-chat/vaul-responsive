@@ -1,0 +1,81 @@
+import { BORDER_RADIUS, TRANSITIONS, EASING, WINDOW_TOP_OFFSET } from './constants';
+import type { Styles } from './styles';
+import type { DrawerDirection } from './types';
+
+export function isVertical(direction: DrawerDirection) {
+  switch (direction) {
+    case 'top':
+    case 'bottom':
+      return true;
+    case 'left':
+    case 'right':
+      return false;
+    default:
+      return direction satisfies never;
+  }
+}
+
+/** 1 when dragging towards the closed side moves along the positive axis (`bottom`, `right`), -1 otherwise. */
+export function directionMultiplier(direction: DrawerDirection) {
+  return direction === 'bottom' || direction === 'right' ? 1 : -1;
+}
+
+export function translate(direction: DrawerDirection, value: number) {
+  return isVertical(direction) ? `translate3d(0, ${value}px, 0)` : `translate3d(${value}px, 0, 0)`;
+}
+
+/** The element's current translation along the drawer's axis, including one mid-transition. */
+export function getTranslate(element: HTMLElement, direction: DrawerDirection) {
+  const { transform } = window.getComputedStyle(element);
+  if (!transform || transform === 'none') return 0;
+  const matrix = new DOMMatrixReadOnly(transform);
+  return isVertical(direction) ? matrix.m42 : matrix.m41;
+}
+
+export function dampenValue(v: number) {
+  return 8 * (Math.log(v + 1) - 2);
+}
+
+/** Scale of the background wrapper while a drawer is open. */
+export function getScale() {
+  return (window.innerWidth - WINDOW_TOP_OFFSET) / window.innerWidth;
+}
+
+/** Styles that scale the `[data-vaul-drawer-wrapper]` background down behind an open drawer. */
+export function getWrapperScaleStyles(direction: DrawerDirection): Styles {
+  const offset = 'calc(env(safe-area-inset-top) + 14px)';
+  return {
+    'border-radius': `${BORDER_RADIUS}px`,
+    overflow: 'hidden',
+    'transform-origin': isVertical(direction) ? 'top' : 'left',
+    transform: `scale(${getScale()}) ${isVertical(direction) ? `translate3d(0, ${offset}, 0)` : `translate3d(${offset}, 0, 0)`}`,
+    'transition-property': 'transform, border-radius',
+    'transition-duration': `${TRANSITIONS.DURATION}s`,
+    'transition-timing-function': EASING,
+  };
+}
+
+export function getWrapper() {
+  return document.querySelector<HTMLElement>('[data-vaul-drawer-wrapper], [vaul-drawer-wrapper]');
+}
+
+// HTML input types that don't bring up the software keyboard.
+const nonTextInputTypes = new Set([
+  'checkbox',
+  'radio',
+  'range',
+  'color',
+  'file',
+  'image',
+  'button',
+  'submit',
+  'reset',
+]);
+
+export function isEditable(target: Element | null): target is HTMLElement {
+  return (
+    (target instanceof HTMLInputElement && !nonTextInputTypes.has(target.type)) ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}

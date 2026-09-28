@@ -1,7 +1,5 @@
-'use client';
-
-import clsx from 'clsx';
-import { Drawer, DialogProps } from 'vaul';
+import { clsx } from 'clsx';
+import { Drawer, DialogProps } from 'vaul-responsive';
 
 function DirectionalDrawer({
   direction,

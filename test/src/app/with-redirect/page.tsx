@@ -1,7 +1,5 @@
-'use client';
-
-import Link from 'next/link';
-import { Drawer } from 'vaul';
+import { Link } from '../../router';
+import { Drawer } from 'vaul-responsive';
 
 export default function Page() {
   return (
