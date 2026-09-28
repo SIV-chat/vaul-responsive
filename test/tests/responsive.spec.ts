@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/responsive');
 });
 
-test.describe('Responsive presentation', () => {
+test.describe('Responsive presentation (the default)', () => {
   test('switches between drawer and dialog without remounting the content', async ({ page }) => {
     await openDrawer(page);
     const content = page.getByTestId('content');

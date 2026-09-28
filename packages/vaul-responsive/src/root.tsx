@@ -129,9 +129,9 @@ export type DialogProps = {
   preventScrollRestoration?: boolean;
   autoFocus?: boolean;
   /**
-   * `drawer` (default) is plain Vaul. `dialog` presents the same Radix dialog without any drawer behavior.
-   * `responsive` is a drawer below `dialogBreakpoint` and a dialog from it up. Switching keeps the dialog
-   * mounted, so the content, its state, focus and scroll position survive the change.
+   * `responsive` (default) is a drawer below `dialogBreakpoint` and a dialog from it up. `drawer` is plain Vaul,
+   * which side drawers usually want. `dialog` presents the same Radix dialog without any drawer behavior.
+   * Switching keeps the dialog mounted, so the content, its state, focus and scroll position survive the change.
    */
   presentation?: DrawerPresentationMode;
   /**
@@ -175,7 +175,7 @@ export function Root({
   onAnimationEnd,
   container,
   autoFocus = false,
-  presentation: presentationMode = 'drawer',
+  presentation: presentationMode = 'responsive',
   dialogBreakpoint = DIALOG_BREAKPOINT,
 }: DialogProps) {
   const isWideViewport = useMediaQuery(

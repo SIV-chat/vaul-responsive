@@ -17,7 +17,7 @@ bun add vaul-responsive
 ```tsx
 import { Drawer } from 'vaul-responsive';
 
-<Drawer.Root presentation="responsive">
+<Drawer.Root>
   <Drawer.Trigger>Open</Drawer.Trigger>
   <Drawer.Portal>
     <Drawer.Overlay className="fixed inset-0 bg-black/40" />
@@ -33,11 +33,11 @@ The styles are injected when the package is imported. They are also exported as 
 
 ## New Root props
 
-| Prop                | Type                                   | Default    | Description                                                                                                       |
-| ------------------- | -------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| `presentation`      | `'drawer' \| 'dialog' \| 'responsive'` | `'drawer'` | `drawer` is plain Vaul, `dialog` drops the drawer behavior, `responsive` switches between them at the breakpoint. |
-| `dialogBreakpoint`  | `number`                               | `768`      | Viewport width in px from which `responsive` presents as a dialog. Below it, and during SSR, it is a drawer.      |
-| `keyboardTopOffset` | `number`                               | `26`       | Space in px kept free above a drawer resting on the keyboard, below the top safe area.                            |
+| Prop                | Type                                   | Default        | Description                                                                                                                    |
+| ------------------- | -------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `presentation`      | `'drawer' \| 'dialog' \| 'responsive'` | `'responsive'` | `responsive` switches between drawer and dialog at the breakpoint, `drawer` is plain Vaul, `dialog` drops the drawer behavior. |
+| `dialogBreakpoint`  | `number`                               | `768`          | Viewport width in px from which `responsive` presents as a dialog. Below it, and during SSR, it is a drawer.                   |
+| `keyboardTopOffset` | `number`                               | `26`           | Space in px kept free above a drawer resting on the keyboard, below the top safe area.                                         |
 
 ## Dialog presentation
 
@@ -78,6 +78,7 @@ While the keyboard is up the content also gets `data-vaul-keyboard="open"`, `--v
 
 Breaking:
 
+- `presentation` defaults to `responsive`: from `dialogBreakpoint` (768px) up, a drawer presents as a dialog. Pass `presentation="drawer"` for side drawers and anywhere Vaul's behavior should stay at every width.
 - `disablePreventScroll` is removed, along with the iOS focus workaround behind it. That workaround called `preventDefault()` on `touchend` and focused fields itself, which put the caret at the start of tapped fields. Radix's scroll lock and the keyboard handling above replace it.
 - `fixed` is removed; the keyboard handling fits the drawer to the visible area instead.
 - `repositionInputs` now works as described above. The old version wrote an inline `height` and `bottom` that were never cleared.

@@ -3,7 +3,7 @@ import { Drawer } from 'vaul-responsive';
 export default function Page() {
   return (
     <div className="w-screen h-screen bg-white p-8 flex justify-center items-center">
-      <Drawer.Root presentation="responsive">
+      <Drawer.Root>
         <Drawer.Trigger asChild>
           <button data-testid="trigger" className="text-2xl">
             Open Drawer
