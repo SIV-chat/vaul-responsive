@@ -63,7 +63,13 @@ cd packages/vaul-responsive && bun run build && bun pm pack
 # in the app: "vaul-responsive": "file:/abs/path/vaul-responsive-<version>.tgz"
 ```
 
-Bun caches a local tarball by the hash in the app's `bun.lock`. After repacking the same version, delete the app's `vaul-responsive` entry in the `packages` section of `bun.lock` and its `node_modules/.bun/vaul-responsive@*`, then `bun install`. Never use `bun install --force` for this: it re-resolves every dependency in the app's lockfile.
+Bun keeps using a local tarball whose hash matches the app's `bun.lock`. After repacking the same version, replace only the `sha512-…` integrity on the app's `vaul-responsive` line in `bun.lock` with the new one, delete `node_modules/.bun/vaul-responsive@*`, then `bun install`:
+
+```sh
+echo "sha512-$(openssl dgst -sha512 -binary vaul-responsive-<version>.tgz | base64)"
+```
+
+Don't delete the lockfile entry or run `bun install --force`: both make Bun re-resolve every dependency in the app's lockfile.
 
 ## Publishing
 
