@@ -1,19 +1,17 @@
-'use client';
-
-import { Drawer } from 'vaul';
+import { Drawer } from 'vaul-responsive';
 
 export default function Page() {
   return (
-    <div className="w-screen h-screen bg-white p-8 flex justify-center items-center" data-vaul-drawer-wrapper="">
+    <div data-vaul-drawer-wrapper="">
       <Drawer.Root>
         <Drawer.Trigger asChild>
           <button>Open Drawer</button>
         </Drawer.Trigger>
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-          <Drawer.Content className="bg-white flex flex-col fixed bottom-0 left-0 right-0 max-h-[82vh] rounded-t-[10px]">
-            <div className="max-w-md w-full mx-auto overflow-auto p-4 rounded-t-[10px]">
-              <input className="border border-gray-400 my-8" placeholder="Input" />
+          <Drawer.Overlay />
+          <Drawer.Content style={{ height: 'auto', maxHeight: '82vh' }}>
+            <div style={{ overflow: 'auto' }}>
+              <input placeholder="Input" />
               <p>
                 But I must explain to you how all this mistaken idea of denouncing pleasure and praising pain was born
                 and I will give you a complete account of the system, and expound the actual teachings of the great
@@ -26,7 +24,7 @@ export default function Page() {
                 right to find fault with a man who chooses to enjoy a pleasure that has no annoying consequences, or one
                 who avoids a pain that produces no resultant pleasure?
               </p>
-              <input className="border border-gray-400 my-8" placeholder="Input" />
+              <input placeholder="Input" />
               <p>
                 On the other hand, we denounce with righteous indignation and dislike men who are so beguiled and
                 demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee the
@@ -39,7 +37,7 @@ export default function Page() {
                 man therefore always holds in these matters to this principle of selection: he rejects pleasures to
                 secure other greater pleasures, or else he endures pains to avoid worse pains.
               </p>
-              <input className="border border-gray-400 my-8" placeholder="Input" />
+              <input placeholder="Input" />
             </div>
           </Drawer.Content>
         </Drawer.Portal>

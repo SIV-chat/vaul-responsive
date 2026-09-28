@@ -1,62 +1,8 @@
-import { AnyFunction, DrawerDirection } from './types';
+import { BORDER_RADIUS, TRANSITIONS, EASING, WINDOW_TOP_OFFSET } from './constants';
+import type { Styles } from './styles';
+import type { DrawerDirection } from './types';
 
-interface Style {
-  [key: string]: string;
-}
-
-const cache = new WeakMap();
-
-export function isInView(el: HTMLElement): boolean {
-  const rect = el.getBoundingClientRect();
-
-  if (!window.visualViewport) return false;
-
-  return (
-    rect.top >= 0 &&
-    rect.left >= 0 &&
-    // Need + 40 for safari detection
-    rect.bottom <= window.visualViewport.height - 40 &&
-    rect.right <= window.visualViewport.width
-  );
-}
-
-export function set(el: Element | HTMLElement | null | undefined, styles: Style, ignoreCache = false) {
-  if (!el || !(el instanceof HTMLElement)) return;
-  let originalStyles: Style = {};
-
-  Object.entries(styles).forEach(([key, value]: [string, string]) => {
-    if (key.startsWith('--')) {
-      el.style.setProperty(key, value);
-      return;
-    }
-
-    originalStyles[key] = (el.style as any)[key];
-    (el.style as any)[key] = value;
-  });
-
-  if (ignoreCache) return;
-
-  cache.set(el, originalStyles);
-}
-
-export function reset(el: Element | HTMLElement | null, prop?: string) {
-  if (!el || !(el instanceof HTMLElement)) return;
-  let originalStyles = cache.get(el);
-
-  if (!originalStyles) {
-    return;
-  }
-
-  if (prop) {
-    (el.style as any)[prop] = originalStyles[prop];
-  } else {
-    Object.entries(originalStyles).forEach(([key, value]) => {
-      (el.style as any)[key] = value;
-    });
-  }
-}
-
-export const isVertical = (direction: DrawerDirection) => {
+export function isVertical(direction: DrawerDirection) {
   switch (direction) {
     case 'top':
     case 'bottom':
@@ -67,51 +13,76 @@ export const isVertical = (direction: DrawerDirection) => {
     default:
       return direction satisfies never;
   }
-};
+}
 
-export function getTranslate(element: HTMLElement, direction: DrawerDirection): number | null {
-  if (!element) {
-    return null;
-  }
-  const style = window.getComputedStyle(element);
-  const transform =
-    // @ts-ignore
-    style.transform || style.webkitTransform || style.mozTransform;
-  let mat = transform.match(/^matrix3d\((.+)\)$/);
-  if (mat) {
-    // https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/matrix3d
-    return parseFloat(mat[1].split(', ')[isVertical(direction) ? 13 : 12]);
-  }
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/matrix
-  mat = transform.match(/^matrix\((.+)\)$/);
-  return mat ? parseFloat(mat[1].split(', ')[isVertical(direction) ? 5 : 4]) : null;
+/** 1 when dragging towards the closed side moves along the positive axis (`bottom`, `right`), -1 otherwise. */
+export function directionMultiplier(direction: DrawerDirection) {
+  return direction === 'bottom' || direction === 'right' ? 1 : -1;
+}
+
+export function translate(direction: DrawerDirection, value: number) {
+  return isVertical(direction) ? `translate3d(0, ${value}px, 0)` : `translate3d(${value}px, 0, 0)`;
+}
+
+/** The element's current translation along the drawer's axis, including one mid-transition. */
+export function getTranslate(element: HTMLElement, direction: DrawerDirection) {
+  const { transform } = window.getComputedStyle(element);
+  if (!transform || transform === 'none') return 0;
+  const matrix = new DOMMatrixReadOnly(transform);
+  return isVertical(direction) ? matrix.m42 : matrix.m41;
 }
 
 export function dampenValue(v: number) {
   return 8 * (Math.log(v + 1) - 2);
 }
 
-export function assignStyle(element: HTMLElement | null | undefined, style: Partial<CSSStyleDeclaration>) {
-  if (!element) return () => {};
+/** Scale of the background wrapper while a drawer is open. */
+export function getScale() {
+  return (window.innerWidth - WINDOW_TOP_OFFSET) / window.innerWidth;
+}
 
-  const prevStyle = element.style.cssText;
-  Object.assign(element.style, style);
+/** Scales the background wrapper and pushes it down by `offset`, e.g. `calc(env(safe-area-inset-top) + 14px)`. */
+export function getWrapperTransform(direction: DrawerDirection, scale: number, offset: string) {
+  return `scale(${scale}) ${isVertical(direction) ? `translate3d(0, ${offset}, 0)` : `translate3d(${offset}, 0, 0)`}`;
+}
 
-  return () => {
-    element.style.cssText = prevStyle;
+/** Styles that scale the `[data-vaul-drawer-wrapper]` background down behind an open drawer. */
+export function getWrapperScaleStyles(direction: DrawerDirection): Styles {
+  return {
+    'border-radius': `${BORDER_RADIUS}px`,
+    overflow: 'hidden',
+    'transform-origin': isVertical(direction) ? 'top' : 'left',
+    transform: getWrapperTransform(direction, getScale(), WRAPPER_OFFSET),
+    'transition-property': 'transform, border-radius',
+    'transition-duration': `${TRANSITIONS.DURATION}s`,
+    'transition-timing-function': EASING,
   };
 }
 
-/**
- * Receives functions as arguments and returns a new function that calls all.
- */
-export function chain<T>(...fns: T[]) {
-  return (...args: T extends AnyFunction ? Parameters<T> : never) => {
-    for (const fn of fns) {
-      if (typeof fn === 'function') {
-        // @ts-ignore
-        fn(...args);
-      }
-    }
-  };
+/** How far the scaled background sits below the top edge. */
+export const WRAPPER_OFFSET = 'calc(env(safe-area-inset-top) + 14px)';
+
+export function getWrapper() {
+  return document.querySelector<HTMLElement>('[data-vaul-drawer-wrapper], [vaul-drawer-wrapper]');
+}
+
+// HTML input types that don't bring up the software keyboard.
+const nonTextInputTypes = new Set([
+  'checkbox',
+  'radio',
+  'range',
+  'color',
+  'file',
+  'image',
+  'button',
+  'submit',
+  'reset',
+]);
+
+export function isEditable(target: Element | null): target is HTMLElement {
+  return (
+    (target instanceof HTMLInputElement && !nonTextInputTypes.has(target.type)) ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }

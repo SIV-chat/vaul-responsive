@@ -1,7 +1,7 @@
 {
-  "name": "vaul",
-  "version": "1.1.2",
-  "description": "Drawer component for React.",
+  "name": "vaul-responsive",
+  "version": "2.0.0",
+  "description": "Vaul drawer for React that can also present as a dialog, without remounting its content.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -10,60 +10,81 @@
     "style.css"
   ],
   "exports": {
-    "import": {
-      "types": "./dist/index.d.mts",
-      "default": "./dist/index.mjs"
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     },
-    "require": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
+    "./style.css": "./style.css",
+    "./package.json": "./package.json"
   },
+  "sideEffects": [
+    "*.css",
+    "./dist/index.js",
+    "./dist/index.mjs"
+  ],
   "scripts": {
-    "type-check": "tsc --noEmit",
-    "build": "pnpm type-check && bunchee && pnpm copy-assets",
-    "copy-assets": "cp -r ./src/style.css ./style.css",
+    "build": "bun run check && bunchee && cp ./src/style.css ./style.css",
     "dev": "bunchee --watch",
-    "dev:test": "turbo run dev --filter=test...",
-    "format": "prettier --write .",
-    "test": "playwright test"
+    "dev:test": "bun run build && bun run --filter test dev",
+    "check": "tsc --noEmit",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint",
+    "test": "bun run build && playwright test",
+    "prepublishOnly": "bun run build"
   },
   "keywords": [
     "react",
     "drawer",
     "dialog",
-    "modal"
+    "modal",
+    "bottom-sheet",
+    "responsive"
   ],
   "author": "Emil Kowalski <e@emilkowal.ski>",
+  "contributors": [
+    "Siv (https://siv.chat)"
+  ],
   "license": "MIT",
-  "homepage": "https://vaul.emilkowal.ski/",
+  "homepage": "https://github.com/SIV-chat/vaul-responsive",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emilkowalski/vaul.git"
+    "url": "https://github.com/SIV-chat/vaul-responsive.git"
   },
   "bugs": {
-    "url": "https://github.com/emilkowalski/vaul/issues"
+    "url": "https://github.com/SIV-chat/vaul-responsive/issues"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.23"
   },
   "devDependencies": {
-    "@playwright/test": "^1.37.1",
-    "@radix-ui/react-dialog": "^1.0.4",
-    "@types/node": "20.5.7",
-    "@types/react": "18.2.55",
-    "@types/react-dom": "18.2.18",
-    "bunchee": "^5.1.5",
-    "eslint": "^7.32.0",
-    "prettier": "^2.5.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "turbo": "1.6",
-    "typescript": "5.2.2"
+    "@playwright/test": "^1.63.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@typescript/typescript6": "^6.0.2",
+    "bunchee": "^7.0.1",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc",
-    "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc"
+    "@types/react": "*",
+    "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0",
+    "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0.0"
   },
-  "packageManager": "pnpm@8.8.0",
-  "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.1"
-  }
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  },
+  "workspaces": [
+    "test"
+  ],
+  "packageManager": "bun@1.4.2"
 }
