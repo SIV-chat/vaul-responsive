@@ -258,7 +258,8 @@ export function useDrag(options: DragOptions) {
     }
 
     if (drag.wrapper && shouldScaleBackground) {
-      const scaleValue = Math.min(getScale() + percentageDragged * (1 - getScale()), 1);
+      const scale = getScale();
+      const scaleValue = Math.min(scale + percentageDragged * (1 - scale), 1);
       // The same offset as the resting scale, including the safe area, so the background doesn't jump.
       const wrapperOffset = `calc(${WRAPPER_OFFSET} * ${1 - percentageDragged})`;
       setStyles(drag.wrapper, {

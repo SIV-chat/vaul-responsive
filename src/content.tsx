@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import React from 'react';
 import { useDrawerContext } from './context';
+import { directionMultiplier } from './helpers';
 import type { DrawerDirection } from './types';
 import { useComposedRefs } from './use-composed-refs';
 import { useScaleBackground } from './use-scale-background';
@@ -72,21 +73,22 @@ export const Content = React.forwardRef<HTMLDivElement, ContentProps>(function C
   const canDrag = !handleOnly && !isDialog;
   useScaleBackground();
 
-  const isDeltaInDirection = (delta: { x: number; y: number }, dragDirection: DrawerDirection, threshold = 0) => {
+  // Runs on every pointer move, so it takes plain numbers rather than allocating a delta object.
+  const isDeltaInDirection = (x: number, y: number, dragDirection: DrawerDirection, threshold = 0) => {
     if (wasBeyondThePointRef.current) return true;
 
-    const deltaY = Math.abs(delta.y);
-    const deltaX = Math.abs(delta.x);
+    const deltaY = Math.abs(y);
+    const deltaX = Math.abs(x);
     const isDeltaX = deltaX > deltaY;
-    const dFactor = ['bottom', 'right'].includes(dragDirection) ? 1 : -1;
+    const dFactor = directionMultiplier(dragDirection);
 
     if (dragDirection === 'left' || dragDirection === 'right') {
-      const isReverseDirection = delta.x * dFactor < 0;
+      const isReverseDirection = x * dFactor < 0;
       if (!isReverseDirection && deltaX >= 0 && deltaX <= threshold) {
         return isDeltaX;
       }
     } else {
-      const isReverseDirection = delta.y * dFactor < 0;
+      const isReverseDirection = y * dFactor < 0;
       if (!isReverseDirection && deltaY >= 0 && deltaY <= threshold) {
         return !isDeltaX;
       }
@@ -164,9 +166,8 @@ export const Content = React.forwardRef<HTMLDivElement, ContentProps>(function C
         const xPosition = event.pageX - pointerStartRef.current.x;
 
         const swipeStartThreshold = event.pointerType === 'touch' ? 10 : 2;
-        const delta = { x: xPosition, y: yPosition };
 
-        const isAllowedToSwipe = isDeltaInDirection(delta, direction, swipeStartThreshold);
+        const isAllowedToSwipe = isDeltaInDirection(xPosition, yPosition, direction, swipeStartThreshold);
         if (isAllowedToSwipe) onDrag(event);
         else if (Math.abs(xPosition) > swipeStartThreshold || Math.abs(yPosition) > swipeStartThreshold) {
           pointerStartRef.current = null;

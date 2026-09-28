@@ -19,7 +19,7 @@ import { useKeyboardAvoidance } from './use-keyboard-avoidance';
 import { useLatestRef, useStableCallback } from './use-latest-ref';
 import { useMediaQuery } from './use-media-query';
 import { usePositionFixed } from './use-position-fixed';
-import { useSnapPoints } from './use-snap-points';
+import { useSnapPoints, useStableSnapPoints } from './use-snap-points';
 
 export interface WithFadeFromProps {
   /**
@@ -152,14 +152,14 @@ export function Root({
   children,
   onDrag: onDragProp,
   onRelease: onReleaseProp,
-  snapPoints,
+  snapPoints: snapPointsProp,
   shouldScaleBackground = false,
   setBackgroundColorOnScale = true,
   closeThreshold = CLOSE_THRESHOLD,
   scrollLockTimeout = SCROLL_LOCK_TIMEOUT,
   dismissible = true,
   handleOnly = false,
-  fadeFromIndex = snapPoints && snapPoints.length - 1,
+  fadeFromIndex = snapPointsProp && snapPointsProp.length - 1,
   activeSnapPoint: activeSnapPointProp,
   setActiveSnapPoint: setActiveSnapPointProp,
   modal = true,
@@ -178,6 +178,7 @@ export function Root({
   presentation: presentationMode = 'responsive',
   dialogBreakpoint = DIALOG_BREAKPOINT,
 }: DialogProps) {
+  const snapPoints = useStableSnapPoints(snapPointsProp);
   const isWideViewport = useMediaQuery(
     presentationMode === 'responsive' ? `(min-width: ${dialogBreakpoint}px)` : undefined,
   );

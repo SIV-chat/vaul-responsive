@@ -38,6 +38,22 @@ function useWindowSize(enabled: boolean) {
   return size;
 }
 
+function isSameSnapPoints(a: (number | string)[] | undefined, b: (number | string)[] | undefined) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((point, index) => point === b[index]);
+}
+
+/**
+ * `snapPoints` with a stable identity while its values stay the same. Consumers usually pass an inline array,
+ * which is new on every render; everything keyed on it would re-snap the drawer on each re-render, even mid-drag.
+ */
+export function useStableSnapPoints(snapPoints: (number | string)[] | undefined) {
+  const ref = React.useRef(snapPoints);
+  if (!isSameSnapPoints(ref.current, snapPoints)) ref.current = snapPoints;
+  return ref.current;
+}
+
 export function useSnapPoints({
   activeSnapPointProp,
   setActiveSnapPointProp,

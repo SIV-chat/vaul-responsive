@@ -14,7 +14,9 @@ export function setStyles(element: Element | null | undefined, styles: Styles) {
     originals.set(element, saved);
   }
 
-  for (const [property, value] of Object.entries(styles)) {
+  // `for...in` rather than `Object.entries`: this runs on every pointer move during a drag.
+  for (const property in styles) {
+    const value = styles[property];
     if (!saved.has(property)) {
       saved.set(property, {
         value: element.style.getPropertyValue(property),

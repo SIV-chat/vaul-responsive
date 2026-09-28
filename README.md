@@ -89,6 +89,8 @@ Other:
 - Listeners (resize, viewport, keyboard) are only attached while the drawer is open, and resize is coalesced per frame.
 - Drag state no longer lives in React state and the context value is memoized, so children don't re-render during a drag.
 - Release velocity is measured over the last 100ms of the drag, so a slow drag that ends in a flick reads as a flick.
+- `snapPoints` can be an inline array. Snap points are compared by value, so a parent that re-renders no longer snaps the drawer back, which in Vaul froze it during a drag.
+- A controlled `activeSnapPoint` no longer re-runs the drawer's effects on every change, so moving off the last snap point while the keyboard is up sticks, as it does uncontrolled.
 - `onPointerDown`, `onPointerMove` and `onFocusOutside` passed to `Content` are always called, also with `handleOnly`.
 - `prefers-reduced-motion: reduce` makes the drawer's animations and transitions instant.
 - `useDrawerContext` and the `DrawerContextValue` type are exported, and `@types/react` is an optional peer dependency.

@@ -30,16 +30,20 @@ export function useControllableState<T>({ prop, defaultProp, onChange }: UseCont
   const isControlled = prop !== undefined;
   const value = isControlled ? prop : uncontrolledProp;
   const onChangeRef = useLatestRef(onChange);
+  // Read through a ref so the setter stays stable while controlled: effects that depend on it must not re-run
+  // on every change of the value.
+  const propRef = useLatestRef(prop);
 
   const setValue = React.useCallback(
     (nextValue: T | undefined) => {
-      if (isControlled) {
-        if (nextValue !== prop) onChangeRef.current?.(nextValue as T);
+      const current = propRef.current;
+      if (current !== undefined) {
+        if (nextValue !== current) onChangeRef.current?.(nextValue as T);
       } else {
         setUncontrolledProp(nextValue);
       }
     },
-    [isControlled, prop, onChangeRef, setUncontrolledProp],
+    [propRef, onChangeRef, setUncontrolledProp],
   );
 
   return [value, setValue] as const;
