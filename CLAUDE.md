@@ -71,6 +71,13 @@ echo "sha512-$(openssl dgst -sha512 -binary vaul-responsive-<version>.tgz | base
 
 Don't delete the lockfile entry or run `bun install --force`: both make Bun re-resolve every dependency in the app's lockfile.
 
+Two more caches can keep serving the previous build of the same version:
+
+- Bun's global cache: remove `$(bun pm cache)/vaul-responsive` and the `@T@…` entries it links to before `bun install`.
+- The app's Vite pre-bundle: delete its `node_modules/.vite` and restart the dev server (or start it with `--force`). Vite before 6 only recognises `bun.lockb`, not the text `bun.lock`, so it never notices the change by itself.
+
+Confirm what the app actually loads, e.g. grep its `node_modules/.vite/deps/vaul-responsive.js` for a string only the new build has.
+
 ## Publishing
 
 `bun publish` from `packages/vaul-responsive` (`prepublishOnly` builds). Breaking changes bump the major version and are listed under "Changes from Vaul" in the package README.
