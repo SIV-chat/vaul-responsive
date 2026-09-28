@@ -24,5 +24,7 @@ test.describe('Responsive presentation (the default)', () => {
     expect(await content.evaluate((element) => (element as HTMLElement & { marker?: boolean }).marker)).toBe(true);
     // No drawer transform left behind on the dialog.
     expect(await content.evaluate((element) => element.style.transform)).toBe('');
+    // The dialog gets the default dialog animation, not a drawer slide.
+    expect(await content.evaluate((element) => getComputedStyle(element).animationName)).toBe('vaulDialogIn');
   });
 });

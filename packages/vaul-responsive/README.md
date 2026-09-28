@@ -50,7 +50,7 @@ The dialog presentation turns off:
 
 On switching to a dialog, the inline `transform`/`transition` Vaul wrote on the content and the inline `opacity`/`transition` on the overlay are restored to what they were. The active snap point is kept and re-applied when it switches back to a drawer.
 
-It ships no styles, so position and animate it yourself with these attributes:
+Its only built-in style is the animation: it fades and scales in from 0.96 over 150ms and out over 100ms, and the overlay fades with it. Tune the timing with `--vaul-dialog-enter-duration` and `--vaul-dialog-exit-duration`. Positioning is yours, keyed on these attributes:
 
 | Attribute                  | On                       | Present when                 |
 | -------------------------- | ------------------------ | ---------------------------- |
