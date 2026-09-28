@@ -49,6 +49,6 @@ export function Router() {
   const pathname = usePathname();
   const Page = routes.get(pathname.replace(/\/$/, '') || '/');
 
-  if (!Page) return <p className="p-8">No test page at {pathname}</p>;
+  if (!Page) return <p>No test page at {pathname}</p>;
   return <Page />;
 }

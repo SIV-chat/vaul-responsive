@@ -17,7 +17,7 @@ test.describe('With redirect', () => {
     // safe check
     await expect(content).toBeVisible();
 
-    content.scrollIntoViewIfNeeded();
+    await content.scrollIntoViewIfNeeded();
 
     await expect(page.getByTestId('content')).toBeInViewport();
   });

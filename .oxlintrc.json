@@ -11,6 +11,12 @@
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "warn",
     "react/react-in-jsx-scope": "off",
+    // React Compiler rules. The library isn't compiled by it, and deliberately reads refs during render
+    // (`useLatestRef`) and calls stable callbacks declared further down the component.
+    "react/refs": "off",
+    "react/immutability": "off",
+    "react/set-state-in-effect": "off",
+    "react/static-components": "off",
     "import/no-unassigned-import": "off"
   },
   "ignorePatterns": ["test/.next", "**/dist"]

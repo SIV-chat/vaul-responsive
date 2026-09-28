@@ -2,7 +2,7 @@ import { Link } from '../router';
 
 export default function Page() {
   return (
-    <div className="w-scareen h-screen bg-white p-8 flex flex-col justify-center gap-6 items-center">
+    <div>
       <Link href="/with-scaled-background">With scaled background</Link>
       <Link href="/without-scaled-background">Without scaled background</Link>
       <Link href="/with-snap-points">With snap points</Link>

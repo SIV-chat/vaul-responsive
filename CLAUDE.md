@@ -1,12 +1,14 @@
 # CLAUDE.md
 
-vaul-responsive is a fork of Vaul 1.1.2, a React drawer built on `@radix-ui/react-dialog`. It adds a dialog presentation that switches without remounting, and on-screen keyboard handling. Public docs, props and the full list of changes from Vaul: `packages/vaul-responsive/README.md`. Keep that README in sync with any public API or behavior change.
+vaul-responsive is a fork of Vaul 1.1.2, a React drawer built on `@radix-ui/react-dialog`. It adds a dialog presentation that switches without remounting, and on-screen keyboard handling. Public docs, props and the full list of changes from Vaul: `README.md`. Keep that README in sync with any public API or behavior change.
 
 ## Layout
 
-- `packages/vaul-responsive/` — the published package. Source in `src/`, built to `dist/` by bunchee.
-- `test/` — Vite + React pages for Playwright. `src/app/<route>/page.tsx` is served at `/<route>` by `src/router.tsx`; specs live in `test/tests/`.
-- Root — private Bun workspace: Playwright config, oxlint/oxfmt config, CI.
+Same layout as upstream Vaul: the repo root is the published package, and `test/` is its only workspace.
+
+- `src/` — the package source, built to `dist/` by bunchee. Only `dist/` and `style.css` are published (`files` in `package.json`).
+- `test/` — Vite + React pages for Playwright. `src/app/<route>/page.tsx` is served at `/<route>` by `src/router.tsx`; specs live in `test/tests/`. Bun can't link the workspace root into a member, so the test app resolves `vaul-responsive` to the root's built `dist/` through an alias in `vite.config.ts` and `paths` in its `tsconfig.json`.
+- Root also holds the Playwright, oxlint and oxfmt config and CI.
 
 ### Source map
 
@@ -47,6 +49,7 @@ Before committing: `bun run lint`, `bunx oxfmt --check`, `bun run check`, and `b
 - **React peer range is 16.8–19.** Don't use APIs newer than the range (e.g. `useSyncExternalStore`, `useId`). JSX uses the classic runtime, so import `React` in `.tsx` files.
 - **Keep `'use client'` at the top of `src/index.tsx`.**
 - **`sideEffects` in `package.json` must keep `"*.css"`.** Without it bunchee tree-shakes `import './style.css'` and the package ships without styles, while builds and type-checks still pass. If Playwright suddenly fails on handles or snap points, check that `dist/index.mjs` calls `__insertCSS(`.
+- **Keep the `@typescript/typescript6` devDependency.** TypeScript 7 has no JavaScript compiler API, and bunchee uses this package to emit `dist/*.d.ts`. `tsc` itself is TypeScript 7.
 
 ## Testing
 
@@ -59,7 +62,7 @@ Before committing: `bun run lint`, `bunx oxfmt --check`, `bun run check`, and `b
 Linking the folder directly makes Bun install this package's devDependencies too. That gives the app a second `@radix-ui/react-dialog` instance, which splits Radix's layer stack (a popover inside a drawer then counts as an outside click). Pack a tarball instead:
 
 ```sh
-cd packages/vaul-responsive && bun run build && bun pm pack
+bun run build && bun pm pack
 # in the app: "vaul-responsive": "file:/abs/path/vaul-responsive-<version>.tgz"
 ```
 
@@ -80,4 +83,4 @@ Confirm what the app actually loads, e.g. grep its `node_modules/.vite/deps/vaul
 
 ## Publishing
 
-`bun publish` from `packages/vaul-responsive` (`prepublishOnly` builds). Breaking changes bump the major version and are listed under "Changes from Vaul" in the package README.
+`bun publish` from the repo root (`prepublishOnly` builds). Breaking changes bump the major version and are listed under "Changes from Vaul" in the README.
