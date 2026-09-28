@@ -1,5 +1,5 @@
 import React from 'react';
-import { KEYBOARD_FIELD_MARGIN, KEYBOARD_THRESHOLD } from './constants';
+import { KEYBOARD_FIELD_MARGIN, KEYBOARD_THRESHOLD, MIN_VISUAL_VIEWPORT_HEIGHT } from './constants';
 import { isEditable } from './helpers';
 import { restoreStyles, setStyles } from './styles';
 
@@ -87,6 +87,9 @@ export function useKeyboardAvoidance({
       if (!drawer) return;
       // Pinch zoom shrinks the visual viewport without a keyboard.
       if (Math.abs(viewport.scale - 1) > 0.01) return;
+      // iOS WKWebViews report a height of 0 or a few dozen px for a frame during browser UI transitions; acting on
+      // that would lift the drawer off-screen. Keep the last good geometry instead.
+      if (viewport.height < MIN_VISUAL_VIEWPORT_HEIGHT) return;
 
       const field = document.activeElement;
       const hasFieldFocus = isEditable(field) && drawer.contains(field);

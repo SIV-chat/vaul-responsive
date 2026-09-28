@@ -41,19 +41,26 @@ export function getScale() {
   return (window.innerWidth - WINDOW_TOP_OFFSET) / window.innerWidth;
 }
 
+/** Scales the background wrapper and pushes it down by `offset`, e.g. `calc(env(safe-area-inset-top) + 14px)`. */
+export function getWrapperTransform(direction: DrawerDirection, scale: number, offset: string) {
+  return `scale(${scale}) ${isVertical(direction) ? `translate3d(0, ${offset}, 0)` : `translate3d(${offset}, 0, 0)`}`;
+}
+
 /** Styles that scale the `[data-vaul-drawer-wrapper]` background down behind an open drawer. */
 export function getWrapperScaleStyles(direction: DrawerDirection): Styles {
-  const offset = 'calc(env(safe-area-inset-top) + 14px)';
   return {
     'border-radius': `${BORDER_RADIUS}px`,
     overflow: 'hidden',
     'transform-origin': isVertical(direction) ? 'top' : 'left',
-    transform: `scale(${getScale()}) ${isVertical(direction) ? `translate3d(0, ${offset}, 0)` : `translate3d(${offset}, 0, 0)`}`,
+    transform: getWrapperTransform(direction, getScale(), WRAPPER_OFFSET),
     'transition-property': 'transform, border-radius',
     'transition-duration': `${TRANSITIONS.DURATION}s`,
     'transition-timing-function': EASING,
   };
 }
+
+/** How far the scaled background sits below the top edge. */
+export const WRAPPER_OFFSET = 'calc(env(safe-area-inset-top) + 14px)';
 
 export function getWrapper() {
   return document.querySelector<HTMLElement>('[data-vaul-drawer-wrapper], [vaul-drawer-wrapper]');

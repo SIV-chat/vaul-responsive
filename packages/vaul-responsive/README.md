@@ -91,6 +91,16 @@ Other:
 - Release velocity is measured over the last 100ms of the drag, so a slow drag that ends in a flick reads as a flick.
 - `onPointerDown`, `onPointerMove` and `onFocusOutside` passed to `Content` are always called, also with `handleOnly`.
 - `prefers-reduced-motion: reduce` makes the drawer's animations and transitions instant.
+- `useDrawerContext` and the `DrawerContextValue` type are exported, and `@types/react` is an optional peer dependency.
+
+Fixes from open upstream pull requests:
+
+- `modal={false}` also leaves the page clickable when the drawer opens through a controlled `open` prop (#576).
+- Scrolled ancestors above the drawer no longer block dragging a drawer that isn't `position: fixed` (#654).
+- `data-vaul-no-drag` elements don't get pointer capture, which swallowed their clicks, e.g. inputs in shadow DOM (#293).
+- The background scales while dragging with `modal={false}` too (#595), and keeps the safe-area offset while dragging instead of jumping (#557).
+- Transient `visualViewport` heights under 80px (WKWebView UI transitions) are ignored by the keyboard handling (#636).
+- The handle's invalid hit-area rule (a stray colon, #531 and #659) is removed; the hit area stays 44px as before.
 
 ## License
 

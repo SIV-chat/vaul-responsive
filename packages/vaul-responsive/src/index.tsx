@@ -6,6 +6,8 @@ import { Content, Handle, Overlay, Portal } from './content';
 import { NestedRoot, Root } from './root';
 
 export { Content, Handle, Overlay, Portal, NestedRoot, Root };
+export { useDrawerContext } from './context';
+export type { DrawerContextValue } from './context';
 export type { ContentProps, HandleProps } from './content';
 export type { DialogProps, WithFadeFromProps, WithoutFadeFromProps } from './root';
 export type { DrawerDirection, DrawerPresentation, DrawerPresentationMode } from './types';

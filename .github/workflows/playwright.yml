@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: CI
 on:
   push:
     branches: [main, master]
@@ -6,17 +6,19 @@ on:
     branches: [main, master]
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.41.2
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun run build
-      - run: bunx playwright install
-      - run: bun run test || exit 1
+      - run: bun run lint
+      - run: bunx oxfmt --check
+      - run: bun run check
+      # Installs the browsers matching @playwright/test, with their system libraries.
+      - run: bunx playwright install --with-deps chromium webkit
+      # Builds the package, then runs the suite.
+      - run: bun run test
       - uses: actions/upload-artifact@v4
         if: always()
         with:

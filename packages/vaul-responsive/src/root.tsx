@@ -198,12 +198,6 @@ export function Root({
         onAnimationEnd?.(o);
       }, TRANSITION_MS);
 
-      if (o && !modal) {
-        window.requestAnimationFrame(() => {
-          document.body.style.pointerEvents = 'auto';
-        });
-      }
-
       if (!o) {
         // This will be removed when the exit animation ends (`500ms`)
         document.body.style.pointerEvents = 'auto';
@@ -323,13 +317,14 @@ export function Root({
   }, [isOpen]);
 
   React.useEffect(() => {
-    if (!modal) {
-      // Need to do this manually unfortunately
+    // Radix locks pointer events on the body for modal dialogs; a non-modal drawer must leave the page usable.
+    // Re-run on open too, so a drawer opened through a controlled `open` prop is covered.
+    if (!modal && isOpen) {
       window.requestAnimationFrame(() => {
         document.body.style.pointerEvents = 'auto';
       });
     }
-  }, [modal]);
+  }, [modal, isOpen]);
 
   React.useEffect(() => {
     if (!isDialog) return;

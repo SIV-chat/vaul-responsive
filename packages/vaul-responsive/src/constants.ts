@@ -32,3 +32,5 @@ export const DIALOG_BREAKPOINT = 768;
 export const KEYBOARD_THRESHOLD = 60;
 /** Space kept between a focused field and the keyboard or scroll edge, in px. */
 export const KEYBOARD_FIELD_MARGIN = 16;
+/** Visual viewport heights below this are transient WKWebView glitches, not a keyboard, in px. */
+export const MIN_VISUAL_VIEWPORT_HEIGHT = 80;

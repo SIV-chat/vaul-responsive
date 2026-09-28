@@ -1,6 +1,7 @@
 import React from 'react';
 import { isIOS } from './browser';
 import {
+  BORDER_RADIUS,
   DRAG_CLASS,
   OPACITY_TRANSITION,
   TRANSFORM_TRANSITION,
@@ -14,7 +15,9 @@ import {
   getTranslate,
   getWrapper,
   getWrapperScaleStyles,
+  getWrapperTransform,
   isVertical,
+  WRAPPER_OFFSET,
   translate,
 } from './helpers';
 import { setStyles } from './styles';
@@ -94,7 +97,7 @@ export function useDrag(options: DragOptions) {
 
   const shouldDrag = React.useCallback(
     (el: EventTarget, isDraggingInDirection: boolean, swipeAmount: number) => {
-      const { direction, openTimeRef, scrollLockTimeout } = optionsRef.current;
+      const { direction, openTimeRef, scrollLockTimeout, drawerRef } = optionsRef.current;
       const drag = state.current;
       let element: HTMLElement | null = el instanceof HTMLElement ? el : null;
       const now = performance.now();
@@ -138,6 +141,8 @@ export function useDrag(options: DragOptions) {
           }
           if (element.getAttribute('role') === 'dialog') return true;
         }
+        // Ancestors above the drawer (e.g. a scrolled page when the drawer isn't `position: fixed`) must not block it.
+        if (element === drawerRef.current) return true;
         element = element.parentElement;
       }
 
@@ -163,7 +168,9 @@ export function useDrag(options: DragOptions) {
     const { isDialog, dismissible, snapPoints, drawerRef, direction, shouldScaleBackground } = optionsRef.current;
     const drawer = drawerRef.current;
     if (isDialog || (!dismissible && !snapPoints)) return;
-    if (!drawer || !(event.target instanceof Node) || !drawer.contains(event.target)) return;
+    if (!drawer || !(event.target instanceof Element) || !drawer.contains(event.target)) return;
+    // No pointer capture on no-drag targets: it would swallow their own clicks (e.g. inputs inside shadow DOM).
+    if (event.target.closest('[data-vaul-no-drag]')) return;
 
     const rect = drawer.getBoundingClientRect();
     const position = pointerPosition(event, direction);
@@ -250,12 +257,13 @@ export function useDrag(options: DragOptions) {
       setStyles(overlayRef.current, { opacity: `${1 - percentageDragged}` });
     }
 
-    if (drag.wrapper && overlayRef.current && shouldScaleBackground) {
+    if (drag.wrapper && shouldScaleBackground) {
       const scaleValue = Math.min(getScale() + percentageDragged * (1 - getScale()), 1);
-      const wrapperTranslate = Math.max(0, 14 - percentageDragged * 14);
+      // The same offset as the resting scale, including the safe area, so the background doesn't jump.
+      const wrapperOffset = `calc(${WRAPPER_OFFSET} * ${1 - percentageDragged})`;
       setStyles(drag.wrapper, {
-        'border-radius': `${8 - percentageDragged * 8}px`,
-        transform: `scale(${scaleValue}) ${translate(direction, wrapperTranslate)}`,
+        'border-radius': `${BORDER_RADIUS * (1 - percentageDragged)}px`,
+        transform: getWrapperTransform(direction, scaleValue, wrapperOffset),
         transition: 'none',
       });
     }
