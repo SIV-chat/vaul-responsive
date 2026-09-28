@@ -21,6 +21,8 @@ test.describe('Initial-snap', () => {
     await expect(page.getByTestId('fully-controlled-content')).not.toBeVisible();
     await page.getByTestId('fully-controlled-trigger').click();
     await expect(page.getByTestId('fully-controlled-content')).toBeVisible();
+    // Radix only listens for outside pointers once the open has settled.
+    await page.waitForTimeout(ANIMATION_DURATION);
     // Click on the background
     await page.mouse.click(0, 0);
 

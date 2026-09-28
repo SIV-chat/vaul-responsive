@@ -1,10 +1,10 @@
 # vaul-responsive
 
-A fork of [Vaul](https://github.com/emilkowalski/vaul) 1.1.2 (unmaintained upstream) that adds a dialog presentation to the drawer.
+A fork of [Vaul](https://github.com/emilkowalski/vaul) 1.1.2 (unmaintained upstream) that adds a dialog presentation and on-screen keyboard handling to the drawer.
 
 A drawer can switch between a bottom/side drawer and a centered dialog **without remounting its content**. Vaul's `Content` is already a Radix `Dialog.Content`, so switching keeps that element mounted and only turns the drawer behavior on or off. Form state, uncontrolled input values, focus and scroll position all survive a switch, for example when a window is resized across a breakpoint.
 
-Everything else is Vaul as-is: same API, same drawer defaults.
+Otherwise the API and the drawer's built-in styles are Vaul's. See [Changes from Vaul](#changes-from-vaul) for what differs.
 
 ## Install
 
@@ -29,27 +29,28 @@ import { Drawer } from 'vaul-responsive';
 </Drawer.Root>;
 ```
 
-### Root props
+The styles are injected when the package is imported. They are also exported as `vaul-responsive/style.css`.
 
-| Prop               | Type                                   | Default    | Description                                                                                                       |
-| ------------------ | -------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| `presentation`     | `'drawer' \| 'dialog' \| 'responsive'` | `'drawer'` | `drawer` is plain Vaul, `dialog` drops the drawer behavior, `responsive` switches between them at the breakpoint. |
-| `dialogBreakpoint` | `number`                               | `768`      | Viewport width in px from which `responsive` presents as a dialog. Below it, and during SSR, it is a drawer.      |
+## New Root props
 
-With the default `presentation` the component behaves exactly like Vaul.
+| Prop                | Type                                   | Default    | Description                                                                                                       |
+| ------------------- | -------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| `presentation`      | `'drawer' \| 'dialog' \| 'responsive'` | `'drawer'` | `drawer` is plain Vaul, `dialog` drops the drawer behavior, `responsive` switches between them at the breakpoint. |
+| `dialogBreakpoint`  | `number`                               | `768`      | Viewport width in px from which `responsive` presents as a dialog. Below it, and during SSR, it is a drawer.      |
+| `keyboardTopOffset` | `number`                               | `26`       | Space in px kept free above a drawer resting on the keyboard, below the top safe area.                            |
 
-### What the dialog presentation turns off
+## Dialog presentation
+
+The dialog presentation turns off:
 
 - Dragging, snap point transforms and the nested-drawer scaling
-- Vaul's body `position: fixed` and iOS scroll handling (Radix's own scroll lock still applies)
-- `shouldScaleBackground` and `repositionInputs`
+- Vaul's body `position: fixed` (Radix's own scroll lock still applies)
+- `shouldScaleBackground` and the keyboard handling
 - Every built-in drawer style, including the slide and fade animations and `user-select: none`
 
-On switching to a dialog, the inline `transform`/`transition` Vaul wrote on the content and the inline `opacity`/`transition` on the overlay are cleared. The active snap point is kept and re-applied when it switches back to a drawer.
+On switching to a dialog, the inline `transform`/`transition` Vaul wrote on the content and the inline `opacity`/`transition` on the overlay are restored to what they were. The active snap point is kept and re-applied when it switches back to a drawer.
 
-### Styling
-
-The dialog presentation ships no styles, so position and animate it yourself. These attributes are available:
+It ships no styles, so position and animate it yourself with these attributes:
 
 | Attribute                  | On                       | Present when                 |
 | -------------------------- | ------------------------ | ---------------------------- |
@@ -61,15 +62,35 @@ The dialog presentation ships no styles, so position and animate it yourself. Th
 
 Radix waits for a CSS animation on `data-state="closed"` before it unmounts, so an exit animation keyed on that attribute plays as usual.
 
-## Development
+## On-screen keyboard
 
-```sh
-bun install
-bun run build
-bun run dev:test   # Next.js test app on :3000
-bun run test       # Playwright
-```
+With `repositionInputs` (on by default), while a field inside a bottom drawer has focus and the on-screen keyboard is up:
+
+- the drawer rests on the keyboard (inline `bottom`) and fits the visible area (inline `max-height`, minus the top safe area and `keyboardTopOffset`);
+- a drawer with snap points moves to its last snap point, and back to the previous one when the keyboard closes, through `setActiveSnapPoint`;
+- the focused field is scrolled into view inside the drawer's own scroll container, so the page never pans; this also covers moving between fields with the keyboard's previous/next buttons.
+
+iOS Safari only shrinks the visual viewport for the keyboard, which is what this corrects. Android also shrinks the layout viewport, so a `bottom: 0` drawer already moves and nothing is written.
+
+While the keyboard is up the content also gets `data-vaul-keyboard="open"`, `--vaul-keyboard-inset` and `--vaul-visible-height`. Set `repositionInputs={false}` to handle the keyboard yourself.
+
+## Changes from Vaul
+
+Breaking:
+
+- `disablePreventScroll` is removed, along with the iOS focus workaround behind it. That workaround called `preventDefault()` on `touchend` and focused fields itself, which put the caret at the start of tapped fields. Radix's scroll lock and the keyboard handling above replace it.
+- `fixed` is removed; the keyboard handling fits the drawer to the visible area instead.
+- `repositionInputs` now works as described above. The old version wrote an inline `height` and `bottom` that were never cleared.
+- The overlay handles release on `pointerup` instead of `mouseup`.
+
+Other:
+
+- Listeners (resize, viewport, keyboard) are only attached while the drawer is open, and resize is coalesced per frame.
+- Drag state no longer lives in React state and the context value is memoized, so children don't re-render during a drag.
+- Release velocity is measured over the last 100ms of the drag, so a slow drag that ends in a flick reads as a flick.
+- `onPointerDown`, `onPointerMove` and `onFocusOutside` passed to `Content` are always called, also with `handleOnly`.
+- `prefers-reduced-motion: reduce` makes the drawer's animations and transitions instant.
 
 ## License
 
-MIT, © Emil Kowalski. Dialog presentation by Siv.
+MIT, © Emil Kowalski. Dialog presentation and keyboard handling by Siv.
