@@ -28,7 +28,7 @@ Bun only; never npm, npx or node.
 
 ```sh
 bun install
-bun run build     # type-check, bunchee, copy style.css
+bun run build     # type-check, copy style.css, bunchee (minified, ESM only)
 bun run check     # types
 bun run lint      # oxlint
 bun run format    # oxfmt
@@ -48,7 +48,8 @@ Before committing: `bun run lint`, `bunx oxfmt --check`, `bun run check`, and `b
 - **Comments explain why, not what.** Upstream comments that explain browser quirks stay.
 - **React peer range is 16.8–19.** Don't use APIs newer than the range (e.g. `useSyncExternalStore`, `useId`). JSX uses the classic runtime, so import `React` in `.tsx` files.
 - **Keep `'use client'` at the top of `src/index.tsx`.**
-- **`sideEffects` in `package.json` must keep `"*.css"`.** Without it bunchee tree-shakes `import './style.css'` and the package ships without styles, while builds and type-checks still pass. If Playwright suddenly fails on handles or snap points, check that `dist/index.mjs` calls `__insertCSS(`.
+- **`sideEffects` in `package.json` must keep `"*.css"`.** Without it bunchee tree-shakes `import './style.css'` and the package ships without styles, while builds and type-checks still pass. If Playwright suddenly fails on handles or snap points, check that `dist/index.js` contains the CSS, e.g. `touch-action:none` (minifying renames `__insertCSS`).
+- **The package is ESM only and minified.** `"type": "module"`, one `dist/index.js` under the `default` export condition, so `require()` still works where Node can require ESM (20.19+, 22.12+). The empty `index.js.map` comes from minifying; the bundle references it, so it ships. bunchee also prints `⨯ ./style.css` because that export has no source to build; the file is copied, not built, and does ship.
 - **Keep the `@typescript/typescript6` devDependency.** TypeScript 7 has no JavaScript compiler API, and bunchee uses this package to emit `dist/*.d.ts`. `tsc` itself is TypeScript 7.
 
 ## Testing

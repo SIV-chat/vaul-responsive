@@ -80,6 +80,7 @@ While the keyboard is up the content also gets `data-vaul-keyboard="open"`, `--v
 
 Breaking:
 
+- ESM only, with no CommonJS build. `require()` still works on Node versions that can require ESM (20.19+, 22.12+); older toolchains that need CommonJS should stay on Vaul.
 - `presentation` defaults to `responsive`: from `dialogBreakpoint` (768px) up, a drawer presents as a dialog. Pass `presentation="drawer"` for side drawers and anywhere Vaul's behavior should stay at every width.
 - `disablePreventScroll` is removed, along with the iOS focus workaround behind it. That workaround called `preventDefault()` on `touchend` and focused fields itself, which put the caret at the start of tapped fields. Radix's scroll lock and the keyboard handling above replace it.
 - `fixed` is removed; the keyboard handling fits the drawer to the visible area instead.
