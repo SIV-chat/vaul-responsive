@@ -37,7 +37,7 @@ export default function Page() {
   const [direction, setDirection] = useState<DrawerDirection>('bottom');
 
   return (
-    <div data-vaul-drawer-wrapper="">
+    <div data-vaul-drawer-wrapper="" data-testid="wrapper">
       <select value={direction} onChange={(e) => setDirection(e.target.value as DrawerDirection)}>
         <option value="top">Top</option>
         <option value="bottom">Bottom</option>

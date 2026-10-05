@@ -63,11 +63,16 @@ export function getWrapperScaleStyles(direction: DrawerDirection): Styles {
     overflow: 'hidden',
     'transform-origin': isVertical(direction) ? 'top' : 'left',
     transform: getWrapperTransform(direction, getScale(), WRAPPER_OFFSET),
-    'transition-property': 'transform, border-radius',
-    'transition-duration': `${TRANSITIONS.DURATION}s`,
-    'transition-timing-function': EASING,
+    ...WRAPPER_TRANSITION,
   };
 }
+
+/** How the background wrapper animates between scaled and full size. A drag replaces it with `transition: none`. */
+export const WRAPPER_TRANSITION: Styles = {
+  'transition-property': 'transform, border-radius',
+  'transition-duration': `${TRANSITIONS.DURATION}s`,
+  'transition-timing-function': EASING,
+};
 
 /** How far the scaled background sits below the top edge. */
 export const WRAPPER_OFFSET = 'calc(env(safe-area-inset-top) + 14px)';

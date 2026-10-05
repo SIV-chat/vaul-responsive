@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDrawerContext } from './context';
 import { TRANSITION_MS } from './constants';
-import { getWrapper, getWrapperScaleStyles } from './helpers';
+import { getWrapper, getWrapperScaleStyles, WRAPPER_TRANSITION } from './helpers';
 import { restoreStyles, setStyles } from './styles';
 import { useIsomorphicLayoutEffect } from './use-isomorphic-layout-effect';
 import { useLatestRef } from './use-latest-ref';
@@ -25,7 +25,9 @@ export function useScaleBackground() {
     setStyles(wrapper, getWrapperScaleStyles(direction));
 
     return () => {
-      // The transition stays, so the wrapper animates back up.
+      // The transition stays, so the wrapper animates back up. A drag left `transition: none` on it; put the
+      // transition back first. On a presentation switch, `data-vaul-switching` still keeps this instant.
+      setStyles(wrapper, WRAPPER_TRANSITION);
       restoreStyles(wrapper, ['transform', 'border-radius', 'overflow']);
       if (!tintsBody) return;
       // Still open means the presentation switched: the wrapper is back up at once, so is the body.

@@ -22,6 +22,9 @@ export default function Page() {
             <div>
               <div />
               <div>
+                <svg data-testid="icon" height="48" viewBox="0 0 24 24" width="48" aria-hidden="true">
+                  <circle cx="12" cy="12" fill="currentColor" r="10" />
+                </svg>
                 <Drawer.Title>Unstyled drawer for React.</Drawer.Title>
                 <p>This component can be used as a replacement for a Dialog on mobile and tablet devices.</p>
                 <p>

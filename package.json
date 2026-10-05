@@ -1,6 +1,6 @@
 {
   "name": "vaul-responsive",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Vaul drawer for React that can also present as a dialog, without remounting its content.",
   "type": "module",
   "main": "./dist/index.js",

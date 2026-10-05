@@ -68,7 +68,10 @@ function pointerPosition(event: PointerEvent, direction: DrawerDirection) {
   return isVertical(direction) ? event.pageY : event.pageX;
 }
 
-/** Speed at release in px/ms, from the samples in the last `VELOCITY_WINDOW_MS`, not the average of the whole drag. */
+/**
+ * Velocity at release in px/ms, from the samples in the last `VELOCITY_WINDOW_MS`, not the average of the whole drag.
+ * Signed like `pointerStart - position`, so it can be compared with the direction of the whole drag.
+ */
 function releaseVelocity(samples: Sample[], fallback: number) {
   const last = samples[samples.length - 1];
   let firstIndex = samples.findIndex((sample) => last.time - sample.time <= VELOCITY_WINDOW_MS);
@@ -77,7 +80,7 @@ function releaseVelocity(samples: Sample[], fallback: number) {
   const first = samples[firstIndex];
   if (!first) return fallback;
   const elapsed = last.time - first.time;
-  return elapsed > 0 ? Math.abs(last.position - first.position) / elapsed : fallback;
+  return elapsed > 0 ? (first.position - last.position) / elapsed : fallback;
 }
 
 export function useDrag(options: DragOptions) {
@@ -99,7 +102,8 @@ export function useDrag(options: DragOptions) {
     (el: EventTarget, isDraggingInDirection: boolean, swipeAmount: number) => {
       const { direction, openTimeRef, scrollLockTimeout, drawerRef } = optionsRef.current;
       const drag = state.current;
-      let element: HTMLElement | null = el instanceof HTMLElement ? el : null;
+      // `Element`, not `HTMLElement`: an SVG icon is a common drag target, and pointer capture keeps it the target.
+      let element: Element | null = el instanceof Element ? el : null;
       const now = performance.now();
 
       // Fixes https://github.com/emilkowalski/vaul/issues/483
@@ -312,8 +316,11 @@ export function useDrag(options: DragOptions) {
     const position = pointerPosition(event, direction);
     drag.samples.push({ position, time: event.timeStamp });
     const distMoved = drag.pointerStart - position;
-    const averageVelocity = Math.abs(distMoved) / Math.max(event.timeStamp - drag.startTime, 1);
-    const velocity = releaseVelocity(drag.samples, averageVelocity);
+    const averageVelocity = distMoved / Math.max(event.timeStamp - drag.startTime, 1);
+    const flickVelocity = releaseVelocity(drag.samples, averageVelocity);
+    // The release decisions take their direction from the whole drag. A flick back against it, e.g. throwing a
+    // half-dragged drawer back open, is a change of mind, not a fast swipe in the drag's direction.
+    const velocity = Math.sign(flickVelocity) === Math.sign(distMoved) ? Math.abs(flickVelocity) : 0;
 
     if (snapPoints) {
       snap.onRelease({

@@ -91,7 +91,7 @@ Other:
 
 - Listeners (resize, viewport, keyboard) are only attached while the drawer is open, and resize is coalesced per frame.
 - Drag state no longer lives in React state and the context value is memoized, so children don't re-render during a drag.
-- Release velocity is measured over the last 100ms of the drag, so a slow drag that ends in a flick reads as a flick.
+- Release velocity is measured over the last 100ms of the drag, so a slow drag that ends in a flick reads as a flick. A flick back against the drag's overall direction counts as no flick, so throwing a half-dragged drawer back open keeps it open.
 - `snapPoints` can be an inline array. Snap points are compared by value, so a parent that re-renders no longer snaps the drawer back, which in Vaul froze it during a drag.
 - A controlled `activeSnapPoint` no longer re-runs the drawer's effects on every change, so moving off the last snap point while the keyboard is up sticks, as it does uncontrolled.
 - A parent drawer with snap points is pushed back from its snap point by a `NestedRoot`, and stays pushed back when its snap offsets change, instead of jumping fully open. Releasing a dragged nested drawer uses the same scale as opening it.
