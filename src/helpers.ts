@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, TRANSITIONS, EASING, WINDOW_TOP_OFFSET } from './constants';
+import { BORDER_RADIUS, TRANSITIONS, EASING, NESTED_DISPLACEMENT, WINDOW_TOP_OFFSET } from './constants';
 import type { Styles } from './styles';
 import type { DrawerDirection } from './types';
 
@@ -30,6 +30,16 @@ export function getTranslate(element: HTMLElement, direction: DrawerDirection) {
   if (!transform || transform === 'none') return 0;
   const matrix = new DOMMatrixReadOnly(transform);
   return isVertical(direction) ? matrix.m42 : matrix.m41;
+}
+
+/**
+ * A parent drawer's transform behind a nested one: `pushedBack` is 1 while the nested drawer is open, 0 once it's
+ * closed, and in between while it's dragged. `offset` is where the parent rests on its own, e.g. its snap point.
+ */
+export function nestedParentTransform(direction: DrawerDirection, pushedBack: number, offset: number) {
+  const pushedBackScale = (window.innerWidth - NESTED_DISPLACEMENT) / window.innerWidth;
+  const scale = 1 - pushedBack * (1 - pushedBackScale);
+  return `scale(${scale}) ${translate(direction, offset - pushedBack * NESTED_DISPLACEMENT)}`;
 }
 
 export function dampenValue(v: number) {

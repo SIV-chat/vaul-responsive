@@ -3,18 +3,18 @@ import React from 'react';
 import {
   CLOSE_THRESHOLD,
   DIALOG_BREAKPOINT,
-  NESTED_DISPLACEMENT,
   SCROLL_LOCK_TIMEOUT,
   TRANSFORM_TRANSITION,
   TRANSITION_MS,
   WINDOW_TOP_OFFSET,
 } from './constants';
 import { DrawerContext, type DrawerContextValue } from './context';
-import { getTranslate, isVertical, translate } from './helpers';
+import { getTranslate, getWrapper, nestedParentTransform, translate } from './helpers';
 import { restoreStyles, setStyles } from './styles';
 import type { DrawerDirection, DrawerPresentation, DrawerPresentationMode } from './types';
 import { useControllableState } from './use-controllable-state';
 import { useDrag } from './use-drag';
+import { useIsomorphicLayoutEffect } from './use-isomorphic-layout-effect';
 import { useKeyboardAvoidance } from './use-keyboard-avoidance';
 import { useLatestRef, useStableCallback } from './use-latest-ref';
 import { useMediaQuery } from './use-media-query';
@@ -206,11 +206,24 @@ export function Root({
     },
   });
   const [hasBeenOpened, setHasBeenOpened] = React.useState(false);
+
+  // Once the presentation switches while open, the new one skips its enter animation until the drawer closes;
+  // switching back must not replay it either. Updated during render, so the first commit of a switch has it.
+  const [presentedAs, setPresentedAs] = React.useState(presentation);
+  const [skipEnterAnimation, setSkipEnterAnimation] = React.useState(false);
+  if (presentation !== presentedAs) {
+    setPresentedAs(presentation);
+    if (isOpen) setSkipEnterAnimation(true);
+  }
+  if (!isOpen && skipEnterAnimation) setSkipEnterAnimation(false);
   const overlayRef = React.useRef<HTMLDivElement>(null);
   const drawerRef = React.useRef<HTMLDivElement>(null);
   const openTimeRef = React.useRef<number | null>(null);
   const shouldAnimate = React.useRef(!defaultOpen);
   const nestedOpenChangeTimer = React.useRef<number | null>(null);
+  // Whether a `NestedRoot` inside this drawer is open, also while presenting as a dialog, so switching back to a
+  // drawer can push this one back again.
+  const isNestedOpenRef = React.useRef(false);
 
   const onSnapPointChange = React.useCallback(
     (activeSnapPointIndex: number) => {
@@ -233,8 +246,12 @@ export function Root({
     snapToSequentialPoint,
     isOpen,
     isDisabled: isDialog,
+    isPushedBackRef: isNestedOpenRef,
   });
   const { activeSnapPoint, activeSnapPointIndex, setActiveSnapPoint, snapPointsOffset, shouldFade } = snap;
+  // Where this drawer rests on its own: its active snap point, if any. A nested drawer pushes it back from there.
+  const restingOffset =
+    snapPoints && !isDialog && activeSnapPointIndex !== null ? (snapPointsOffset[activeSnapPointIndex] ?? 0) : 0;
 
   // A dialog relies on Radix's own scroll lock; switching to one restores the body.
   const { restorePositionSetting } = usePositionFixed({
@@ -327,18 +344,52 @@ export function Root({
     }
   }, [modal, isOpen]);
 
+  // A switch lands in one frame. The new presentation's attributes are committed but not styled yet, so styles
+  // are recalculated once here with transitions off: nothing animates from the old presentation's values, and no
+  // frame is painted with the drawer's inline position still on a dialog.
+  const previousPresentationRef = React.useRef(presentation);
+  useIsomorphicLayoutEffect(() => {
+    if (previousPresentationRef.current === presentation) return;
+    previousPresentationRef.current = presentation;
+
+    if (isDialog) {
+      // Drags and snap points leave their position inline; a dialog is positioned by its own styles.
+      cancelDrag();
+      restoreStyles(drawerRef.current, ['transform', 'transition']);
+      restoreStyles(overlayRef.current, ['opacity', 'transition']);
+    } else if (isNestedOpenRef.current) {
+      setStyles(drawerRef.current, {
+        transition: TRANSFORM_TRANSITION,
+        transform: nestedParentTransform(direction, 1, restingOffset),
+      });
+    }
+
+    const elements = [drawerRef.current, overlayRef.current, shouldScaleBackground ? getWrapper() : null];
+    for (const element of elements) element?.setAttribute('data-vaul-switching', '');
+    // Reading layout applies the pending styles now, while transitions are off.
+    document.body.getBoundingClientRect();
+    for (const element of elements) element?.removeAttribute('data-vaul-switching');
+  }, [presentation, isDialog, cancelDrag, shouldScaleBackground, direction, restingOffset]);
+
   React.useEffect(() => {
-    if (!isDialog) return;
-    // Drags and snap points leave their position inline; a dialog is positioned by its own styles.
-    cancelDrag();
-    restoreStyles(drawerRef.current, ['transform', 'transition']);
-    restoreStyles(overlayRef.current, ['opacity', 'transition']);
-  }, [isDialog, cancelDrag]);
+    // A nested drawer unmounts with this one's content without reporting that it closed.
+    if (!isOpen) isNestedOpenRef.current = false;
+  }, [isOpen]);
+
+  // A nested drawer reports its open state to its parent whenever it changes, however it changed: its trigger, a
+  // drag, dismissing, or a controlled `open`. Callbacks would miss a controlled change.
+  const parentDrawer = React.useContext(DrawerContext);
+  const onParentNestedOpenChange = nested ? parentDrawer?.onNestedOpenChange : undefined;
+  const reportedOpenRef = React.useRef(false);
+  useIsomorphicLayoutEffect(() => {
+    if (!onParentNestedOpenChange || reportedOpenRef.current === isOpen) return;
+    reportedOpenRef.current = isOpen;
+    onParentNestedOpenChange(isOpen);
+  }, [isOpen, onParentNestedOpenChange]);
 
   const onNestedOpenChange = useStableCallback((o: boolean) => {
+    isNestedOpenRef.current = o;
     if (isDialog) return;
-    const scale = o ? (window.innerWidth - NESTED_DISPLACEMENT) / window.innerWidth : 1;
-    const initialTranslate = o ? -NESTED_DISPLACEMENT : 0;
 
     if (nestedOpenChangeTimer.current) {
       window.clearTimeout(nestedOpenChangeTimer.current);
@@ -346,7 +397,7 @@ export function Root({
 
     setStyles(drawerRef.current, {
       transition: TRANSFORM_TRANSITION,
-      transform: `scale(${scale}) ${translate(direction, initialTranslate)}`,
+      transform: nestedParentTransform(direction, o ? 1 : 0, restingOffset),
     });
 
     if (!o && drawerRef.current) {
@@ -361,23 +412,18 @@ export function Root({
   const onNestedDrag = useStableCallback((_event: React.PointerEvent<HTMLDivElement>, percentageDragged: number) => {
     if (percentageDragged < 0 || isDialog) return;
 
-    const initialScale = (window.innerWidth - NESTED_DISPLACEMENT) / window.innerWidth;
-    const newScale = initialScale + percentageDragged * (1 - initialScale);
-    const newTranslate = -NESTED_DISPLACEMENT + percentageDragged * NESTED_DISPLACEMENT;
-
     setStyles(drawerRef.current, {
-      transform: `scale(${newScale}) ${translate(direction, newTranslate)}`,
+      transform: nestedParentTransform(direction, 1 - percentageDragged, restingOffset),
       transition: 'none',
     });
   });
 
   const onNestedRelease = useStableCallback((_event: React.PointerEvent<HTMLDivElement>, o: boolean) => {
     if (isDialog || !o) return;
-    const dim = isVertical(direction) ? window.innerHeight : window.innerWidth;
-    const scale = (dim - NESTED_DISPLACEMENT) / dim;
+    // The same scale as opening, which Vaul took from the height here and made the parent jump on release.
     setStyles(drawerRef.current, {
       transition: TRANSFORM_TRANSITION,
-      transform: `scale(${scale}) ${translate(direction, -NESTED_DISPLACEMENT)}`,
+      transform: nestedParentTransform(direction, 1, restingOffset),
     });
   });
 
@@ -393,6 +439,7 @@ export function Root({
       onDrag,
       dismissible,
       shouldAnimate,
+      skipEnterAnimation,
       handleOnly,
       isOpen,
       isDraggingRef,
@@ -420,6 +467,7 @@ export function Root({
       onRelease,
       onDrag,
       dismissible,
+      skipEnterAnimation,
       handleOnly,
       isOpen,
       isDraggingRef,
@@ -462,33 +510,28 @@ export function Root({
   );
 }
 
-export function NestedRoot({ onDrag, onOpenChange, open: nestedIsOpen, ...rest }: DialogProps) {
+export function NestedRoot({ onDrag, onRelease, ...rest }: DialogProps) {
   const parent = React.useContext(DrawerContext);
 
   if (!parent) {
     throw new Error('Drawer.NestedRoot must be placed in another drawer');
   }
-  const { onNestedDrag, onNestedOpenChange, onNestedRelease } = parent;
+  const { onNestedDrag, onNestedRelease } = parent;
 
+  // The consumer's props go first, so their `onDrag` / `onRelease` are chained instead of replacing the parent's.
+  // Opening and closing reach the parent from `Root` itself (see `onParentNestedOpenChange`).
   return (
     <Root
+      {...rest}
       nested
-      open={nestedIsOpen}
-      onClose={() => {
-        onNestedOpenChange(false);
-      }}
       onDrag={(e, p) => {
         onNestedDrag(e, p);
         onDrag?.(e, p);
       }}
-      onOpenChange={(o) => {
-        if (o) {
-          onNestedOpenChange(o);
-        }
-        onOpenChange?.(o);
+      onRelease={(e, o) => {
+        onNestedRelease(e, o);
+        onRelease?.(e, o);
       }}
-      onRelease={onNestedRelease}
-      {...rest}
     />
   );
 }

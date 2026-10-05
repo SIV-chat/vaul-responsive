@@ -81,6 +81,12 @@
   animation: none !important;
 }
 
+/* Set for the single style recalculation of a presentation switch, so nothing transitions from the old
+   presentation's values. */
+[data-vaul-switching] {
+  transition: none !important;
+}
+
 [data-vaul-overlay][data-vaul-snap-points='true'] {
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { directionMultiplier, isVertical, translate } from './helpers';
+import { directionMultiplier, isVertical, nestedParentTransform, translate } from './helpers';
 import { OPACITY_TRANSITION, TRANSFORM_TRANSITION, VELOCITY_THRESHOLD } from './constants';
 import { setStyles } from './styles';
 import { useControllableState } from './use-controllable-state';
@@ -11,9 +11,23 @@ function getWindowSize(): Size | undefined {
   return typeof window === 'undefined' ? undefined : { width: window.innerWidth, height: window.innerHeight };
 }
 
+function isSameSize(a: Size | undefined, b: Size | undefined) {
+  return a === b || (!!a && !!b && a.width === b.width && a.height === b.height);
+}
+
 /** The window size while `enabled`, updated at most once per frame. */
 function useWindowSize(enabled: boolean) {
   const [size, setSize] = React.useState(getWindowSize);
+  // The window may have changed while this was off, e.g. the resize that switched a dialog back to a drawer.
+  // Read it in the render that turns tracking on: a frame later, snap points would animate from stale offsets.
+  const [wasEnabled, setWasEnabled] = React.useState(enabled);
+  if (enabled !== wasEnabled) {
+    setWasEnabled(enabled);
+    if (enabled) {
+      const next = getWindowSize();
+      if (!isSameSize(size, next)) setSize(next);
+    }
+  }
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -23,11 +37,9 @@ function useWindowSize(enabled: boolean) {
       frame = window.requestAnimationFrame(() => {
         frame = 0;
         const next = getWindowSize();
-        setSize((prev) => (prev && next && prev.width === next.width && prev.height === next.height ? prev : next));
+        setSize((prev) => (isSameSize(prev, next) ? prev : next));
       });
     };
-    // The window may have changed size while this drawer was closed.
-    onResize();
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
@@ -67,6 +79,7 @@ export function useSnapPoints({
   snapToSequentialPoint,
   isOpen,
   isDisabled = false,
+  isPushedBackRef,
 }: {
   activeSnapPointProp?: number | string | null;
   setActiveSnapPointProp?(snapPoint: number | null | string): void;
@@ -81,6 +94,8 @@ export function useSnapPoints({
   isOpen: boolean;
   /** While presenting as a dialog: keep the active snap point, but write no drawer styles. */
   isDisabled?: boolean;
+  /** True while a nested drawer is open: snapping keeps this drawer pushed back behind it. */
+  isPushedBackRef?: React.RefObject<boolean>;
 }) {
   const [activeSnapPoint, setActiveSnapPoint] = useControllableState<string | number | null>({
     prop: activeSnapPointProp,
@@ -89,7 +104,8 @@ export function useSnapPoints({
   });
 
   const hasSnapPoints = !!snapPoints && snapPoints.length > 0;
-  const windowSize = useWindowSize(isOpen && hasSnapPoints);
+  // A dialog doesn't use snap offsets.
+  const windowSize = useWindowSize(isOpen && hasSnapPoints && !isDisabled);
 
   const isLastSnapPoint = React.useMemo(
     () => activeSnapPoint === snapPoints?.[snapPoints.length - 1] || null,
@@ -138,7 +154,9 @@ export function useSnapPoints({
 
       setStyles(drawerRef.current, {
         transition: TRANSFORM_TRANSITION,
-        transform: translate(direction, dimension),
+        transform: isPushedBackRef?.current
+          ? nestedParentTransform(direction, 1, dimension)
+          : translate(direction, dimension),
       });
 
       const hidesOverlay =
@@ -160,6 +178,7 @@ export function useSnapPoints({
       setActiveSnapPoint,
       onSnapPointChange,
       direction,
+      isPushedBackRef,
     ],
   );
 

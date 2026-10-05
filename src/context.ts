@@ -33,6 +33,8 @@ export interface DrawerContextValue {
   container?: HTMLElement | null;
   autoFocus?: boolean;
   shouldAnimate: React.RefObject<boolean>;
+  /** True after the presentation switched while open, until the drawer closes. */
+  skipEnterAnimation: boolean;
 }
 
 export const DrawerContext = React.createContext<DrawerContextValue | null>(null);

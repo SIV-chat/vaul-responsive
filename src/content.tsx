@@ -8,8 +8,17 @@ import { useScaleBackground } from './use-scale-background';
 
 export const Overlay = React.forwardRef<HTMLDivElement, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>>(
   function Overlay(props, ref) {
-    const { overlayRef, snapPoints, onRelease, shouldFade, isOpen, modal, shouldAnimate, presentation } =
-      useDrawerContext();
+    const {
+      overlayRef,
+      snapPoints,
+      onRelease,
+      shouldFade,
+      isOpen,
+      modal,
+      shouldAnimate,
+      skipEnterAnimation,
+      presentation,
+    } = useDrawerContext();
     const composedRef = useComposedRefs(ref, overlayRef);
     const isDialog = presentation === 'dialog';
     const hasSnapPoints = !!snapPoints && snapPoints.length > 0 && !isDialog;
@@ -28,7 +37,7 @@ export const Overlay = React.forwardRef<HTMLDivElement, React.ComponentPropsWith
         data-vaul-dialog-overlay={isDialog ? '' : undefined}
         data-vaul-snap-points={isOpen && hasSnapPoints ? 'true' : 'false'}
         data-vaul-snap-points-overlay={isOpen && shouldFade ? 'true' : 'false'}
-        data-vaul-animate={shouldAnimate.current ? 'true' : 'false'}
+        data-vaul-animate={shouldAnimate.current && !skipEnterAnimation ? 'true' : 'false'}
         data-vaul-presentation={presentation}
         {...props}
       />
@@ -58,6 +67,7 @@ export const Content = React.forwardRef<HTMLDivElement, ContentProps>(function C
     container,
     handleOnly,
     shouldAnimate,
+    skipEnterAnimation,
     autoFocus,
     presentation,
   } = useDrawerContext();
@@ -121,7 +131,7 @@ export const Content = React.forwardRef<HTMLDivElement, ContentProps>(function C
       data-vaul-delayed-snap-points={delayedSnapPoints ? 'true' : 'false'}
       data-vaul-snap-points={isOpen && hasSnapPoints && !isDialog ? 'true' : 'false'}
       data-vaul-custom-container={container ? 'true' : 'false'}
-      data-vaul-animate={shouldAnimate.current ? 'true' : 'false'}
+      data-vaul-animate={shouldAnimate.current && !skipEnterAnimation ? 'true' : 'false'}
       {...rest}
       ref={composedRef}
       style={

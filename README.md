@@ -50,6 +50,8 @@ The dialog presentation turns off:
 
 On switching to a dialog, the inline `transform`/`transition` Vaul wrote on the content and the inline `opacity`/`transition` on the overlay are restored to what they were. The active snap point is kept and re-applied when it switches back to a drawer.
 
+A switch while open is instant: the new presentation appears in place in the same frame, without its enter animation and without transitions from the old one, the scaled background included. A drawer with an open `NestedRoot` is pushed back again when it switches from a dialog to a drawer. Built-in animations play again from the next close. For the switch, Vaul renders `data-vaul-animate="false"` on the content and overlay until the drawer closes, and sets `data-vaul-switching` on them for the one style recalculation of the switch. Key your own enter animations or transitions on those to skip them too.
+
 Its only built-in style is the animation: it fades and scales in from 0.96 over 150ms and out over 100ms, and the overlay fades with it. Tune the timing with `--vaul-dialog-enter-duration` and `--vaul-dialog-exit-duration`. Positioning is yours, keyed on these attributes:
 
 | Attribute                  | On                       | Present when                 |
@@ -91,6 +93,8 @@ Other:
 - Release velocity is measured over the last 100ms of the drag, so a slow drag that ends in a flick reads as a flick.
 - `snapPoints` can be an inline array. Snap points are compared by value, so a parent that re-renders no longer snaps the drawer back, which in Vaul froze it during a drag.
 - A controlled `activeSnapPoint` no longer re-runs the drawer's effects on every change, so moving off the last snap point while the keyboard is up sticks, as it does uncontrolled.
+- A parent drawer with snap points is pushed back from its snap point by a `NestedRoot`, and stays pushed back when its snap offsets change, instead of jumping fully open. Releasing a dragged nested drawer uses the same scale as opening it.
+- A `NestedRoot` pushes its parent back and releases it however it opens and closes, including a controlled `open` and a consumer's own `onClose` or `onRelease`, which used to replace the parent's handlers.
 - `onPointerDown`, `onPointerMove` and `onFocusOutside` passed to `Content` are always called, also with `handleOnly`.
 - `prefers-reduced-motion: reduce` makes the drawer's animations and transitions instant.
 - `useDrawerContext` and the `DrawerContextValue` type are exported, and `@types/react` is an optional peer dependency.
