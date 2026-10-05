@@ -8,21 +8,21 @@ export async function openDrawer(page: Page) {
   await expect(page.getByTestId('content')).toBeVisible();
 }
 
-export async function dragWithSpeed(
-  page: Page,
-  selector: string,
-  startY: number,
-  endY: number,
-  speed: number = 10,
-): Promise<void> {
-  const startX = 0;
-  const distance = Math.abs(endY - startY);
-  const steps = distance / speed;
-  const delayPerStep = 10; // in milliseconds
-  const yOffset = (endY - startY) / steps;
+export const MOBILE = { width: 390, height: 844 };
+export const DESKTOP = { width: 1024, height: 768 };
 
-  await page.hover(selector);
-  await page.mouse.down();
-  await page.mouse.move(0, -200);
-  await page.mouse.up();
+/** CSS animations and transitions running on test ids, e.g. `content:slideFromBottom` or `overlay:transition`. */
+export function runningAnimations(page: Page) {
+  return page.evaluate(() =>
+    document.getAnimations().map((animation) => {
+      const target = (animation.effect as KeyframeEffect | null)?.target as HTMLElement | null;
+      const name = animation instanceof CSSAnimation ? animation.animationName : 'transition';
+      return `${target?.dataset.testid}:${name}`;
+    }),
+  );
+}
+
+export async function switchTo(page: Page, presentation: 'drawer' | 'dialog') {
+  await page.setViewportSize(presentation === 'dialog' ? DESKTOP : MOBILE);
+  await expect(page.getByTestId('content')).toHaveAttribute('data-vaul-presentation', presentation);
 }

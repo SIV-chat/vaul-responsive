@@ -1,8 +1,70 @@
 import React from 'react';
-import { set, isVertical } from './helpers';
-import { TRANSITIONS, VELOCITY_THRESHOLD } from './constants';
+import { directionMultiplier, isVertical, nestedParentTransform, translate } from './helpers';
+import { OPACITY_TRANSITION, TRANSFORM_TRANSITION, VELOCITY_THRESHOLD } from './constants';
+import { setStyles } from './styles';
 import { useControllableState } from './use-controllable-state';
-import { DrawerDirection } from './types';
+import type { DrawerDirection } from './types';
+
+type Size = { width: number; height: number };
+
+function getWindowSize(): Size | undefined {
+  return typeof window === 'undefined' ? undefined : { width: window.innerWidth, height: window.innerHeight };
+}
+
+function isSameSize(a: Size | undefined, b: Size | undefined) {
+  return a === b || (!!a && !!b && a.width === b.width && a.height === b.height);
+}
+
+/** The window size while `enabled`, updated at most once per frame. */
+function useWindowSize(enabled: boolean) {
+  const [size, setSize] = React.useState(getWindowSize);
+  // The window may have changed while this was off, e.g. the resize that switched a dialog back to a drawer.
+  // Read it in the render that turns tracking on: a frame later, snap points would animate from stale offsets.
+  const [wasEnabled, setWasEnabled] = React.useState(enabled);
+  if (enabled !== wasEnabled) {
+    setWasEnabled(enabled);
+    if (enabled) {
+      const next = getWindowSize();
+      if (!isSameSize(size, next)) setSize(next);
+    }
+  }
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    let frame = 0;
+    const onResize = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const next = getWindowSize();
+        setSize((prev) => (isSameSize(prev, next) ? prev : next));
+      });
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [enabled]);
+
+  return size;
+}
+
+function isSameSnapPoints(a: (number | string)[] | undefined, b: (number | string)[] | undefined) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((point, index) => point === b[index]);
+}
+
+/**
+ * `snapPoints` with a stable identity while its values stay the same. Consumers usually pass an inline array,
+ * which is new on every render; everything keyed on it would re-snap the drawer on each re-render, even mid-drag.
+ */
+export function useStableSnapPoints(snapPoints: (number | string)[] | undefined) {
+  const ref = React.useRef(snapPoints);
+  if (!isSameSnapPoints(ref.current, snapPoints)) ref.current = snapPoints;
+  return ref.current;
+}
 
 export function useSnapPoints({
   activeSnapPointProp,
@@ -15,17 +77,25 @@ export function useSnapPoints({
   direction = 'bottom',
   container,
   snapToSequentialPoint,
+  isOpen,
+  isDisabled = false,
+  isPushedBackRef,
 }: {
   activeSnapPointProp?: number | string | null;
   setActiveSnapPointProp?(snapPoint: number | null | string): void;
   snapPoints?: (number | string)[];
   fadeFromIndex?: number;
-  drawerRef: React.RefObject<HTMLDivElement>;
-  overlayRef: React.RefObject<HTMLDivElement>;
+  drawerRef: React.RefObject<HTMLDivElement | null>;
+  overlayRef: React.RefObject<HTMLDivElement | null>;
   onSnapPointChange(activeSnapPointIndex: number): void;
   direction?: DrawerDirection;
   container?: HTMLElement | null | undefined;
   snapToSequentialPoint?: boolean;
+  isOpen: boolean;
+  /** While presenting as a dialog: keep the active snap point, but write no drawer styles. */
+  isDisabled?: boolean;
+  /** True while a nested drawer is open: snapping keeps this drawer pushed back behind it. */
+  isPushedBackRef?: React.RefObject<boolean>;
 }) {
   const [activeSnapPoint, setActiveSnapPoint] = useControllableState<string | number | null>({
     prop: activeSnapPointProp,
@@ -33,26 +103,9 @@ export function useSnapPoints({
     onChange: setActiveSnapPointProp,
   });
 
-  const [windowDimensions, setWindowDimensions] = React.useState(
-    typeof window !== 'undefined'
-      ? {
-          innerWidth: window.innerWidth,
-          innerHeight: window.innerHeight,
-        }
-      : undefined,
-  );
-
-  React.useEffect(() => {
-    function onResize() {
-      setWindowDimensions({
-        innerWidth: window.innerWidth,
-        innerHeight: window.innerHeight,
-      });
-    }
-    window.addEventListener('resize', onResize);
-
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const hasSnapPoints = !!snapPoints && snapPoints.length > 0;
+  // A dialog doesn't use snap offsets.
+  const windowSize = useWindowSize(isOpen && hasSnapPoints && !isDisabled);
 
   const isLastSnapPoint = React.useMemo(
     () => activeSnapPoint === snapPoints?.[snapPoints.length - 1] || null,
@@ -75,38 +128,19 @@ export function useSnapPoints({
   const snapPointsOffset = React.useMemo(() => {
     const containerSize = container
       ? { width: container.getBoundingClientRect().width, height: container.getBoundingClientRect().height }
-      : typeof window !== 'undefined'
-      ? { width: window.innerWidth, height: window.innerHeight }
-      : { width: 0, height: 0 };
+      : (windowSize ?? { width: 0, height: 0 });
+
+    const containerLength = isVertical(direction) ? containerSize.height : containerSize.width;
 
     return (
       snapPoints?.map((snapPoint) => {
-        const isPx = typeof snapPoint === 'string';
-        let snapPointAsNumber = 0;
-
-        if (isPx) {
-          snapPointAsNumber = parseInt(snapPoint, 10);
-        }
-
-        if (isVertical(direction)) {
-          const height = isPx ? snapPointAsNumber : windowDimensions ? snapPoint * containerSize.height : 0;
-
-          if (windowDimensions) {
-            return direction === 'bottom' ? containerSize.height - height : -containerSize.height + height;
-          }
-
-          return height;
-        }
-        const width = isPx ? snapPointAsNumber : windowDimensions ? snapPoint * containerSize.width : 0;
-
-        if (windowDimensions) {
-          return direction === 'right' ? containerSize.width - width : -containerSize.width + width;
-        }
-
-        return width;
+        const length = typeof snapPoint === 'string' ? parseInt(snapPoint, 10) : snapPoint * containerLength;
+        if (!windowSize) return length;
+        // Offset from the open position, towards the side the drawer comes from.
+        return directionMultiplier(direction) * (containerLength - length);
       }) ?? []
     );
-  }, [snapPoints, windowDimensions, container]);
+  }, [snapPoints, windowSize, container, direction]);
 
   const activeSnapPointOffset = React.useMemo(
     () => (activeSnapPointIndex !== null ? snapPointsOffset?.[activeSnapPointIndex] : null),
@@ -118,35 +152,38 @@ export function useSnapPoints({
       const newSnapPointIndex = snapPointsOffset?.findIndex((snapPointDim) => snapPointDim === dimension) ?? null;
       onSnapPointChange(newSnapPointIndex);
 
-      set(drawerRef.current, {
-        transition: `transform ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-        transform: isVertical(direction) ? `translate3d(0, ${dimension}px, 0)` : `translate3d(${dimension}px, 0, 0)`,
+      setStyles(drawerRef.current, {
+        transition: TRANSFORM_TRANSITION,
+        transform: isPushedBackRef?.current
+          ? nestedParentTransform(direction, 1, dimension)
+          : translate(direction, dimension),
       });
 
-      if (
+      const hidesOverlay =
         snapPointsOffset &&
         newSnapPointIndex !== snapPointsOffset.length - 1 &&
         fadeFromIndex !== undefined &&
         newSnapPointIndex !== fadeFromIndex &&
-        newSnapPointIndex < fadeFromIndex
-      ) {
-        set(overlayRef.current, {
-          transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-          opacity: '0',
-        });
-      } else {
-        set(overlayRef.current, {
-          transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-          opacity: '1',
-        });
-      }
+        newSnapPointIndex < fadeFromIndex;
+      setStyles(overlayRef.current, { transition: OPACITY_TRANSITION, opacity: hidesOverlay ? '0' : '1' });
 
       setActiveSnapPoint(snapPoints?.[Math.max(newSnapPointIndex, 0)]);
     },
-    [drawerRef.current, snapPoints, snapPointsOffset, fadeFromIndex, overlayRef, setActiveSnapPoint],
+    [
+      drawerRef,
+      snapPoints,
+      snapPointsOffset,
+      fadeFromIndex,
+      overlayRef,
+      setActiveSnapPoint,
+      onSnapPointChange,
+      direction,
+      isPushedBackRef,
+    ],
   );
 
   React.useEffect(() => {
+    if (isDisabled) return;
     if (activeSnapPoint || activeSnapPointProp) {
       const newIndex =
         snapPoints?.findIndex((snapPoint) => snapPoint === activeSnapPointProp || snapPoint === activeSnapPoint) ?? -1;
@@ -154,7 +191,7 @@ export function useSnapPoints({
         snapToPoint(snapPointsOffset[newIndex] as number);
       }
     }
-  }, [activeSnapPoint, activeSnapPointProp, snapPoints, snapPointsOffset, snapToPoint]);
+  }, [activeSnapPoint, activeSnapPointProp, snapPoints, snapPointsOffset, snapToPoint, isDisabled]);
 
   function onRelease({
     draggedDistance,
@@ -178,9 +215,7 @@ export function useSnapPoints({
     const hasDraggedUp = draggedDistance > 0;
 
     if (isOverlaySnapPoint) {
-      set(overlayRef.current, {
-        transition: `opacity ${TRANSITIONS.DURATION}s cubic-bezier(${TRANSITIONS.EASE.join(',')})`,
-      });
+      setStyles(overlayRef.current, { transition: OPACITY_TRANSITION });
     }
 
     if (!snapToSequentialPoint && velocity > 2 && !hasDraggedUp) {
@@ -239,9 +274,7 @@ export function useSnapPoints({
       return;
     }
 
-    set(drawerRef.current, {
-      transform: isVertical(direction) ? `translate3d(0, ${newValue}px, 0)` : `translate3d(${newValue}px, 0, 0)`,
-    });
+    setStyles(drawerRef.current, { transform: translate(direction, newValue) });
   }
 
   function getPercentageDragged(absDraggedDistance: number, isDraggingDown: boolean) {
@@ -270,11 +303,7 @@ export function useSnapPoints({
 
     const percentageDragged = absDraggedDistance / Math.abs(snapPointDistance);
 
-    if (isOverlaySnapPoint) {
-      return 1 - percentageDragged;
-    } else {
-      return percentageDragged;
-    }
+    return isOverlaySnapPoint ? 1 - percentageDragged : percentageDragged;
   }
 
   return {

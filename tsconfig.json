@@ -1,11 +1,14 @@
 {
   "compilerOptions": {
     "jsx": "react",
-    "target": "es2018",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "lib": ["es2015", "dom"],
-    "strict": true
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "strict": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": false,
+    "types": []
   },
-  "include": ["src"],
+  "include": ["src"]
 }

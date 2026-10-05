@@ -1,0 +1,81 @@
+/* Just enough layout for the fixtures to behave like real drawers: an overlay over the page and a drawer on its edge. */
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+body,
+main {
+  min-height: 500vh;
+}
+
+html {
+  height: -webkit-fill-available;
+}
+
+/* The fixtures' icons have a viewBox and no size, which would otherwise fill the drawer's width. */
+svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-vaul-drawer-wrapper] {
+  min-height: 100vh;
+  background: white;
+}
+
+[data-vaul-overlay],
+[data-vaul-dialog-overlay] {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+}
+
+[data-vaul-drawer],
+[data-vaul-dialog] {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #f4f4f5;
+}
+
+[data-vaul-drawer][data-vaul-drawer-direction='bottom'],
+[data-vaul-drawer][data-vaul-drawer-direction='top'] {
+  left: 0;
+  right: 0;
+  height: 96%;
+}
+
+[data-vaul-drawer][data-vaul-drawer-direction='bottom'] {
+  bottom: 0;
+  border-radius: 10px 10px 0 0;
+}
+
+[data-vaul-drawer][data-vaul-drawer-direction='top'] {
+  top: 0;
+  border-radius: 0 0 10px 10px;
+}
+
+[data-vaul-drawer][data-vaul-drawer-direction='left'],
+[data-vaul-drawer][data-vaul-drawer-direction='right'] {
+  top: 0;
+  bottom: 0;
+  width: min(300px, 80%);
+}
+
+[data-vaul-drawer][data-vaul-drawer-direction='left'] {
+  left: 0;
+}
+
+[data-vaul-drawer][data-vaul-drawer-direction='right'] {
+  right: 0;
+}
+
+[data-vaul-dialog] {
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: min(480px, 90%);
+  border-radius: 10px;
+}

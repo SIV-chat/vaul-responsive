@@ -1,24 +1,9 @@
-import { Page, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { ANIMATION_DURATION } from './constants';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/initial-snap');
 });
-
-const snapPointYPositions = {
-  0: 800,
-  1: 600,
-  2: 590,
-  3: 200,
-} as const;
-
-const snapTo = async (page: Page, snapPointIndex: keyof typeof snapPointYPositions) => {
-  await page.hover('[data-vaul-drawer]');
-  await page.mouse.down();
-  await page.mouse.move(0, snapPointYPositions[snapPointIndex]);
-  await page.mouse.up();
-  await page.waitForTimeout(ANIMATION_DURATION);
-};
 
 test.describe('Initial-snap', () => {
   test('should be open and snapped on initial load', async ({ page }) => {

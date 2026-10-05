@@ -1,36 +1,16 @@
-export function isMobileFirefox(): boolean | undefined {
-  const userAgent = navigator.userAgent;
-  return (
-    typeof window !== 'undefined' &&
-    ((/Firefox/.test(userAgent) && /Mobile/.test(userAgent)) || // Android Firefox
-      /FxiOS/.test(userAgent)) // iOS Firefox
-  );
+// `navigator.platform` is deprecated and `userAgentData` is missing in Safari, so the user agent is the signal left.
+
+function userAgent() {
+  return typeof navigator === 'undefined' ? '' : navigator.userAgent;
 }
 
-export function isMac(): boolean | undefined {
-  return testPlatform(/^Mac/);
+export function isIOS() {
+  const agent = userAgent();
+  // iPadOS reports a desktop Mac user agent; only touch support tells it apart.
+  return /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
 }
 
-export function isIPhone(): boolean | undefined {
-  return testPlatform(/^iPhone/);
-}
-
-export function isSafari(): boolean | undefined {
-  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-}
-
-export function isIPad(): boolean | undefined {
-  return (
-    testPlatform(/^iPad/) ||
-    // iPadOS 13 lies and says it's a Mac, but we can distinguish by detecting touch support.
-    (isMac() && navigator.maxTouchPoints > 1)
-  );
-}
-
-export function isIOS(): boolean | undefined {
-  return isIPhone() || isIPad();
-}
-
-export function testPlatform(re: RegExp): boolean | undefined {
-  return typeof window !== 'undefined' && window.navigator != null ? re.test(window.navigator.platform) : undefined;
+/** True for every browser on iOS as well, since they all run WebKit. */
+export function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(userAgent());
 }

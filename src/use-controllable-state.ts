@@ -1,6 +1,7 @@
 // This code comes from https://github.com/radix-ui/primitives/blob/main/packages/react/use-controllable-state/src/useControllableState.tsx
 
 import React from 'react';
+import { useLatestRef } from './use-latest-ref';
 
 type UseControllableStateParams<T> = {
   prop?: T | undefined;
@@ -8,51 +9,41 @@ type UseControllableStateParams<T> = {
   onChange?: (state: T) => void;
 };
 
-type SetStateFn<T> = (prevState?: T) => T;
-
-function useCallbackRef<T extends (...args: any[]) => any>(callback: T | undefined): T {
-  const callbackRef = React.useRef(callback);
-
-  React.useEffect(() => {
-    callbackRef.current = callback;
-  });
-
-  // https://github.com/facebook/react/issues/19240
-  return React.useMemo(() => ((...args) => callbackRef.current?.(...args)) as T, []);
-}
-
 function useUncontrolledState<T>({ defaultProp, onChange }: Omit<UseControllableStateParams<T>, 'prop'>) {
   const uncontrolledState = React.useState<T | undefined>(defaultProp);
   const [value] = uncontrolledState;
   const prevValueRef = React.useRef(value);
-  const handleChange = useCallbackRef(onChange);
+  const onChangeRef = useLatestRef(onChange);
 
   React.useEffect(() => {
     if (prevValueRef.current !== value) {
-      handleChange(value as T);
+      onChangeRef.current?.(value as T);
       prevValueRef.current = value;
     }
-  }, [value, prevValueRef, handleChange]);
+  }, [value, onChangeRef]);
 
   return uncontrolledState;
 }
-export function useControllableState<T>({ prop, defaultProp, onChange = () => {} }: UseControllableStateParams<T>) {
+
+export function useControllableState<T>({ prop, defaultProp, onChange }: UseControllableStateParams<T>) {
   const [uncontrolledProp, setUncontrolledProp] = useUncontrolledState({ defaultProp, onChange });
   const isControlled = prop !== undefined;
   const value = isControlled ? prop : uncontrolledProp;
-  const handleChange = useCallbackRef(onChange);
+  const onChangeRef = useLatestRef(onChange);
+  // Read through a ref so the setter stays stable while controlled: effects that depend on it must not re-run
+  // on every change of the value.
+  const propRef = useLatestRef(prop);
 
-  const setValue: React.Dispatch<React.SetStateAction<T | undefined>> = React.useCallback(
-    (nextValue) => {
-      if (isControlled) {
-        const setter = nextValue as SetStateFn<T>;
-        const value = typeof nextValue === 'function' ? setter(prop) : nextValue;
-        if (value !== prop) handleChange(value as T);
+  const setValue = React.useCallback(
+    (nextValue: T | undefined) => {
+      const current = propRef.current;
+      if (current !== undefined) {
+        if (nextValue !== current) onChangeRef.current?.(nextValue as T);
       } else {
         setUncontrolledProp(nextValue);
       }
     },
-    [isControlled, prop, setUncontrolledProp, handleChange],
+    [propRef, onChangeRef, setUncontrolledProp],
   );
 
   return [value, setValue] as const;
